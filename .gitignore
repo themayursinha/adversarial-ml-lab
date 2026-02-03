@@ -1,0 +1,64 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+.env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Security - NEVER commit these
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+credentials/
+api_keys.txt
+config.local.py
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Gradio
+flagged/
+*.gradio/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

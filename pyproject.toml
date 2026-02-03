@@ -1,0 +1,51 @@
+[project]
+name = "adversarial-ml-lab"
+version = "0.1.0"
+description = "Interactive demonstrations of adversarial ML attacks and defenses"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Mayur"}
+]
+keywords = [
+    "adversarial-ml",
+    "llm-security",
+    "prompt-injection",
+    "machine-learning",
+    "ai-safety"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://github.com/mayur/adversarial-ml-lab"
+Documentation = "https://github.com/mayur/adversarial-ml-lab#readme"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "S", "B"]  # S = security checks
+ignore = []
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
