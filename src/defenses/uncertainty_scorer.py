@@ -12,15 +12,16 @@ SECURITY: Implements the "verify before trust" principle.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional, Callable
-from enum import Enum
 import re
 import statistics
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional
 
 
 class ConfidenceLevel(Enum):
     """Confidence level for human review decisions."""
+
     HIGH = "high"  # No review needed
     MEDIUM = "medium"  # Optional review
     LOW = "low"  # Review recommended
@@ -30,6 +31,7 @@ class ConfidenceLevel(Enum):
 @dataclass
 class UncertaintySignal:
     """A single uncertainty signal from one analyzer."""
+
     analyzer_name: str
     raw_score: float  # 0.0 = certain, 1.0 = very uncertain
     normalized_score: float
@@ -40,6 +42,7 @@ class UncertaintySignal:
 @dataclass
 class EnsembleResult:
     """Aggregated result from ensemble uncertainty scoring."""
+
     overall_uncertainty: float  # 0.0 to 1.0
     confidence_level: ConfidenceLevel
     needs_human_review: bool
@@ -51,10 +54,10 @@ class EnsembleResult:
 
 class UncertaintyAnalyzer:
     """Base class for uncertainty analyzers."""
-    
+
     name: str = "base"
     weight: float = 1.0
-    
+
     def analyze(
         self,
         input_text: str,
@@ -67,10 +70,10 @@ class UncertaintyAnalyzer:
 
 class LengthRatioAnalyzer(UncertaintyAnalyzer):
     """Analyzes input/output length ratios for anomalies."""
-    
+
     name = "length_ratio"
     weight = 0.8
-    
+
     def __init__(
         self,
         expected_ratio_min: float = 0.1,
@@ -79,7 +82,7 @@ class LengthRatioAnalyzer(UncertaintyAnalyzer):
         """Initialize with expected ratio bounds."""
         self.min_ratio = expected_ratio_min
         self.max_ratio = expected_ratio_max
-    
+
     def analyze(
         self,
         input_text: str,
@@ -89,12 +92,12 @@ class LengthRatioAnalyzer(UncertaintyAnalyzer):
         """Analyze length ratio for anomalies."""
         input_len = len(input_text.split())
         output_len = len(output_text.split())
-        
+
         if input_len == 0:
-            ratio = float('inf')
+            ratio = float("inf")
         else:
             ratio = output_len / input_len
-        
+
         # Calculate uncertainty based on deviation from expected range
         if self.min_ratio <= ratio <= self.max_ratio:
             raw_score = 0.0
@@ -107,7 +110,7 @@ class LengthRatioAnalyzer(UncertaintyAnalyzer):
             deviation = (ratio - self.max_ratio) / self.max_ratio
             raw_score = min(1.0, deviation * 0.5)  # Less severe for long outputs
             explanation = f"Output unusually long (ratio: {ratio:.2f})"
-        
+
         return UncertaintySignal(
             analyzer_name=self.name,
             raw_score=raw_score,
@@ -119,21 +122,25 @@ class LengthRatioAnalyzer(UncertaintyAnalyzer):
 
 class PatternDeviationAnalyzer(UncertaintyAnalyzer):
     """Analyzes output for suspicious patterns."""
-    
+
     name = "pattern_deviation"
     weight = 1.2
-    
+
     # Patterns that indicate potential issues
     SUSPICIOUS_PATTERNS = [
         (r"(?i)i (cannot|can't|won't|will not|refuse)", 0.3, "refusal_detected"),
         (r"(?i)(error|exception|failed|failure)", 0.4, "error_indicator"),
         (r"(?i)(hack|attack|inject|exploit)", 0.6, "security_term"),
-        (r"(?i)(ignore|bypass|override).{0,30}(instruction|rule|guideline)", 0.8, "bypass_language"),
+        (
+            r"(?i)(ignore|bypass|override).{0,30}(instruction|rule|guideline)",
+            0.8,
+            "bypass_language",
+        ),
         (r"(?i)admin|root|sudo|privilege", 0.5, "privilege_term"),
         (r"\[.*REDACTED.*\]", 0.4, "redaction_marker"),
         (r"(?i)(warning|alert|danger|critical)", 0.3, "warning_language"),
     ]
-    
+
     def analyze(
         self,
         input_text: str,
@@ -143,19 +150,19 @@ class PatternDeviationAnalyzer(UncertaintyAnalyzer):
         """Analyze for suspicious patterns."""
         scores = []
         found_patterns = []
-        
+
         for pattern, score, name in self.SUSPICIOUS_PATTERNS:
             if re.search(pattern, output_text):
                 scores.append(score)
                 found_patterns.append(name)
-        
+
         if scores:
             raw_score = max(scores)  # Take highest concern
             explanation = f"Suspicious patterns detected: {', '.join(found_patterns)}"
         else:
             raw_score = 0.0
             explanation = "No suspicious patterns detected"
-        
+
         return UncertaintySignal(
             analyzer_name=self.name,
             raw_score=raw_score,
@@ -167,10 +174,10 @@ class PatternDeviationAnalyzer(UncertaintyAnalyzer):
 
 class SemanticConsistencyAnalyzer(UncertaintyAnalyzer):
     """Analyzes semantic consistency between input task and output."""
-    
+
     name = "semantic_consistency"
     weight = 1.0
-    
+
     # Keywords expected for different task types
     TASK_KEYWORDS = {
         "summarize": ["summary", "key", "main", "points", "overview", "brief"],
@@ -180,7 +187,7 @@ class SemanticConsistencyAnalyzer(UncertaintyAnalyzer):
         "translate": ["translation", "translates"],
         "code": ["function", "def", "class", "return", "import", "```"],
     }
-    
+
     def analyze(
         self,
         input_text: str,
@@ -190,7 +197,7 @@ class SemanticConsistencyAnalyzer(UncertaintyAnalyzer):
         """Analyze semantic consistency."""
         task_type = (context or {}).get("task_type", "general")
         expected_keywords = self.TASK_KEYWORDS.get(task_type, [])
-        
+
         if not expected_keywords:
             return UncertaintySignal(
                 analyzer_name=self.name,
@@ -199,18 +206,18 @@ class SemanticConsistencyAnalyzer(UncertaintyAnalyzer):
                 explanation="Unknown task type, cannot verify consistency",
                 metadata={"task_type": task_type},
             )
-        
+
         output_lower = output_text.lower()
         matches = sum(1 for kw in expected_keywords if kw in output_lower)
         match_ratio = matches / len(expected_keywords)
-        
+
         raw_score = 1.0 - match_ratio
-        
+
         if match_ratio >= 0.3:
             explanation = f"Output consistent with '{task_type}' task"
         else:
             explanation = f"Output may not match expected '{task_type}' format"
-        
+
         return UncertaintySignal(
             analyzer_name=self.name,
             raw_score=raw_score,
@@ -222,10 +229,10 @@ class SemanticConsistencyAnalyzer(UncertaintyAnalyzer):
 
 class ResponseCoherenceAnalyzer(UncertaintyAnalyzer):
     """Analyzes response coherence and structure."""
-    
+
     name = "response_coherence"
     weight = 0.9
-    
+
     def analyze(
         self,
         input_text: str,
@@ -235,39 +242,39 @@ class ResponseCoherenceAnalyzer(UncertaintyAnalyzer):
         """Analyze response coherence."""
         issues = []
         raw_score = 0.0
-        
+
         # Check for abrupt endings
-        if output_text.strip().endswith(('...', '…')) and len(output_text) > 50:
+        if output_text.strip().endswith(("...", "…")) and len(output_text) > 50:
             issues.append("truncated_output")
             raw_score += 0.3
-        
+
         # Check for mixed messages (e.g., both refusal and compliance)
         has_refusal = bool(re.search(r"(?i)cannot|can't|won't|unable", output_text))
         has_compliance = bool(re.search(r"(?i)here('s| is)|certainly|sure|okay", output_text))
         if has_refusal and has_compliance:
             issues.append("mixed_signals")
             raw_score += 0.4
-        
+
         # Check for repeated content
         words = output_text.split()
         if len(words) > 10:
             # Simple repetition check
             window_size = 5
             for i in range(len(words) - window_size * 2):
-                window = ' '.join(words[i:i+window_size])
-                rest = ' '.join(words[i+window_size:])
+                window = " ".join(words[i : i + window_size])
+                rest = " ".join(words[i + window_size :])
                 if window in rest:
                     issues.append("repetition_detected")
                     raw_score += 0.3
                     break
-        
+
         raw_score = min(1.0, raw_score)
-        
+
         if issues:
             explanation = f"Coherence issues: {', '.join(issues)}"
         else:
             explanation = "Response appears coherent"
-        
+
         return UncertaintySignal(
             analyzer_name=self.name,
             raw_score=raw_score,
@@ -280,11 +287,11 @@ class ResponseCoherenceAnalyzer(UncertaintyAnalyzer):
 class EnsembleUncertaintyScorer:
     """
     Ensemble-based uncertainty scoring for human-in-the-loop decisions.
-    
+
     Combines multiple analyzers to provide robust uncertainty estimates.
     High uncertainty triggers human review recommendations.
     """
-    
+
     def __init__(
         self,
         analyzers: Optional[list[UncertaintyAnalyzer]] = None,
@@ -293,7 +300,7 @@ class EnsembleUncertaintyScorer:
     ) -> None:
         """
         Initialize the ensemble scorer.
-        
+
         Args:
             analyzers: List of analyzers to use
             human_review_threshold: Uncertainty threshold for requiring review
@@ -307,7 +314,7 @@ class EnsembleUncertaintyScorer:
         ]
         self.human_review_threshold = human_review_threshold
         self.aggregation = aggregation
-    
+
     def score(
         self,
         input_text: str,
@@ -316,12 +323,12 @@ class EnsembleUncertaintyScorer:
     ) -> EnsembleResult:
         """
         Score the uncertainty of an LLM output.
-        
+
         Args:
             input_text: Original input
             output_text: LLM output
             context: Optional context (task type, etc.)
-            
+
         Returns:
             EnsembleResult with uncertainty analysis
         """
@@ -333,13 +340,15 @@ class EnsembleUncertaintyScorer:
                 signals.append(signal)
             except Exception as e:
                 # Don't let one analyzer failure stop the process
-                signals.append(UncertaintySignal(
-                    analyzer_name=analyzer.name,
-                    raw_score=0.5,  # Default uncertainty on error
-                    normalized_score=0.5,
-                    explanation=f"Analyzer error: {str(e)}",
-                ))
-        
+                signals.append(
+                    UncertaintySignal(
+                        analyzer_name=analyzer.name,
+                        raw_score=0.5,  # Default uncertainty on error
+                        normalized_score=0.5,
+                        explanation=f"Analyzer error: {str(e)}",
+                    )
+                )
+
         # Aggregate scores
         if self.aggregation == "weighted_mean":
             total_weight = sum(a.weight for a in self.analyzers)
@@ -350,9 +359,9 @@ class EnsembleUncertaintyScorer:
             overall = statistics.median(s.raw_score for s in signals)
         else:
             overall = statistics.mean(s.raw_score for s in signals)
-        
+
         overall = min(1.0, max(0.0, overall))
-        
+
         # Determine confidence level
         if overall < 0.2:
             confidence_level = ConfidenceLevel.HIGH
@@ -362,17 +371,13 @@ class EnsembleUncertaintyScorer:
             confidence_level = ConfidenceLevel.LOW
         else:
             confidence_level = ConfidenceLevel.CRITICAL
-        
+
         # Determine if human review is needed
         needs_review = overall >= self.human_review_threshold
-        
+
         # Collect review reasons
-        review_reasons = [
-            s.explanation
-            for s in signals
-            if s.raw_score >= 0.4
-        ]
-        
+        review_reasons = [s.explanation for s in signals if s.raw_score >= 0.4]
+
         # Generate recommendation
         if confidence_level == ConfidenceLevel.HIGH:
             recommendation = "Output appears reliable. No action needed."
@@ -381,8 +386,10 @@ class EnsembleUncertaintyScorer:
         elif confidence_level == ConfidenceLevel.LOW:
             recommendation = "Significant uncertainty. Human review recommended."
         else:
-            recommendation = "⚠️ CRITICAL: High uncertainty detected. Human review REQUIRED before use."
-        
+            recommendation = (
+                "⚠️ CRITICAL: High uncertainty detected. Human review REQUIRED before use."
+            )
+
         return EnsembleResult(
             overall_uncertainty=overall,
             confidence_level=confidence_level,
@@ -392,7 +399,7 @@ class EnsembleUncertaintyScorer:
             recommendation=recommendation,
             review_reasons=review_reasons,
         )
-    
+
     def create_review_report(self, result: EnsembleResult) -> str:
         """Create a human-readable review report."""
         report = []
@@ -407,24 +414,24 @@ class EnsembleUncertaintyScorer:
         report.append("-" * 60)
         report.append("ANALYZER RESULTS")
         report.append("-" * 60)
-        
+
         for signal in result.signals:
             report.append(f"\n{signal.analyzer_name}:")
             report.append(f"  Score: {signal.raw_score:.2%}")
             report.append(f"  {signal.explanation}")
-        
+
         report.append("")
         report.append("-" * 60)
         report.append("RECOMMENDATION")
         report.append("-" * 60)
         report.append(result.recommendation)
-        
+
         if result.review_reasons:
             report.append("")
             report.append("Review Reasons:")
             for reason in result.review_reasons:
                 report.append(f"  • {reason}")
-        
+
         report.append("=" * 60)
-        
+
         return "\n".join(report)

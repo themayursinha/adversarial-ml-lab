@@ -12,24 +12,26 @@ EDUCATIONAL PURPOSE ONLY - Do not use against production systems.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Optional
-import re
 
 
 @dataclass
 class InjectionPayload:
     """A prompt injection payload with metadata."""
+
     name: str
     description: str
     payload: str
     technique: str
     severity: str  # low, medium, high, critical
-    
-    
+
+
 @dataclass
 class AttackResult:
     """Result of an injection attack attempt."""
+
     original_document: str
     injected_document: str
     payload_used: InjectionPayload
@@ -40,11 +42,11 @@ class AttackResult:
 class PromptInjectionAttack:
     """
     Demonstrates indirect prompt injection attacks.
-    
+
     These attacks exploit the fact that LLMs process user-provided content
     and may follow instructions embedded within that content.
     """
-    
+
     # Pre-built injection payloads for demonstration
     PAYLOADS = [
         InjectionPayload(
@@ -107,18 +109,18 @@ class PromptInjectionAttack:
             severity="high",
         ),
     ]
-    
+
     def __init__(self) -> None:
         """Initialize the attack demonstrator."""
         self.payloads = self.PAYLOADS.copy()
-    
+
     def get_payload_by_name(self, name: str) -> Optional[InjectionPayload]:
         """Get a payload by its name."""
         for payload in self.payloads:
             if payload.name.lower() == name.lower():
                 return payload
         return None
-    
+
     def list_payloads(self) -> list[dict]:
         """List all available payloads with their details."""
         return [
@@ -130,7 +132,7 @@ class PromptInjectionAttack:
             }
             for p in self.payloads
         ]
-    
+
     def inject_at_position(
         self,
         document: str,
@@ -139,12 +141,12 @@ class PromptInjectionAttack:
     ) -> AttackResult:
         """
         Inject a payload into a document at the specified position.
-        
+
         Args:
             document: Original document content
             payload: Injection payload to use
             position: Where to inject (start, middle, end, hidden)
-            
+
         Returns:
             AttackResult with the injected document
         """
@@ -155,20 +157,14 @@ class PromptInjectionAttack:
             # Insert in the middle of the document
             mid_point = len(document) // 2
             # Try to find a paragraph break near the middle
-            newline_positions = [m.start() for m in re.finditer(r'\n\n', document)]
+            newline_positions = [m.start() for m in re.finditer(r"\n\n", document)]
             if newline_positions:
                 # Find the closest paragraph break to middle
                 closest = min(newline_positions, key=lambda x: abs(x - mid_point))
-                injected = (
-                    document[:closest] + 
-                    f"\n\n{payload.payload}\n\n" + 
-                    document[closest:]
-                )
+                injected = document[:closest] + f"\n\n{payload.payload}\n\n" + document[closest:]
             else:
                 injected = (
-                    document[:mid_point] + 
-                    f"\n\n{payload.payload}\n\n" + 
-                    document[mid_point:]
+                    document[:mid_point] + f"\n\n{payload.payload}\n\n" + document[mid_point:]
                 )
             visible = True
         elif position == "end":
@@ -181,7 +177,7 @@ class PromptInjectionAttack:
             visible = False
         else:
             raise ValueError(f"Invalid position: {position}")
-        
+
         return AttackResult(
             original_document=document,
             injected_document=injected,
@@ -189,7 +185,7 @@ class PromptInjectionAttack:
             injection_position=position,
             visible_to_user=visible,
         )
-    
+
     def create_malicious_document(
         self,
         legitimate_content: str,
@@ -198,12 +194,12 @@ class PromptInjectionAttack:
     ) -> AttackResult:
         """
         Create a realistic malicious document for demonstration.
-        
+
         Args:
             legitimate_content: The "real" content to wrap the attack in
             attack_goal: What the attacker wants to achieve
             stealth: Whether to use stealthy injection techniques
-            
+
         Returns:
             AttackResult with the malicious document
         """
@@ -216,10 +212,10 @@ class PromptInjectionAttack:
             payload = self.get_payload_by_name("Delimiter Confusion")
         else:
             payload = self.payloads[0]
-        
+
         if payload is None:
             payload = self.payloads[0]
-        
+
         position = "hidden" if stealth else "end"
         return self.inject_at_position(legitimate_content, payload, position)
 
@@ -243,7 +239,6 @@ Recommendations:
 2. Expand marketing efforts in emerging markets
 3. Implement new customer feedback systems
 """,
-    
     "technical_doc": """
 API Documentation - Authentication Module
 
@@ -261,7 +256,6 @@ Security Considerations:
 - Sessions expire after 24 hours of inactivity
 - Rate limiting is enforced (100 requests/minute)
 """,
-    
     "email_content": """
 From: john.smith@company.com
 To: team@company.com
