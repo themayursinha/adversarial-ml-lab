@@ -1,0 +1,24 @@
+# .dockerignore
+# Exclude unnecessary and sensitive files
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.venv
+venv
+.env
+*.db
+*.log
+tests/
+implementation_plan.md
+task.md
+walkthrough.md
+assets/
+node_modules/
+docker-compose.yml
+Dockerfile
+.dockerignore

@@ -24,13 +24,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Usage
+## Docker
+
+The application is containerized using **Chainguard Hardened Images (DHI)** for maximum security (minimal attack surface, non-root execution, zero known vulnerabilities).
 
 ```bash
-python app.py
+docker build -t adversarial-ml-lab .
+docker run -p 7860:7860 adversarial-ml-lab
 ```
-
-Open http://localhost:7860
 
 ## Project Structure
 
