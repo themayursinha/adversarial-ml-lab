@@ -1,28 +1,19 @@
-# Adversarial ML Portfolio Project - Dependencies
-# Install in virtual environment: pip install -r requirements.txt
-
-# Web UI Framework
+# Runtime
+bleach>=6.0.0
 gradio>=4.0.0
-
-# Data Processing
+matplotlib>=3.7.0
 numpy>=1.24.0
 pandas>=2.0.0
-
-# Visualization
 plotly>=5.18.0
-matplotlib>=3.7.0
-
-# Text Processing & Security
 regex>=2023.0.0
-bleach>=6.0.0  # HTML sanitization for security
 
-# Optional: OpenAI Integration (for future API mode)
-# openai>=1.0.0
-
-# Testing
+# Testing and quality
+bandit>=1.7.8
+mypy>=1.5.0
+pip-audit>=2.7.3
 pytest>=7.4.0
 pytest-cov>=4.1.0
-
-# Type checking & Linting (dev)
-mypy>=1.5.0
 ruff>=0.1.0
+
+# Supply-chain artifacts
+cyclonedx-bom>=4.1.0
