@@ -1,10 +1,23 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "adversarial-ml-lab"
-version = "0.1.0"
+version = "0.2.0"
 description = "Interactive demonstrations of adversarial ML attacks and defenses"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+dependencies = [
+    "bleach>=6.0.0",
+    "gradio>=4.0.0",
+    "matplotlib>=3.7.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "plotly>=5.18.0",
+    "regex>=2023.0.0",
+]
 authors = [
     {name = "Mayur"}
 ]
@@ -19,7 +32,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -27,9 +39,16 @@ classifiers = [
     "Topic :: Security",
 ]
 
+[project.scripts]
+adml = "src.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/mayur/adversarial-ml-lab"
 Documentation = "https://github.com/mayur/adversarial-ml-lab#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -42,10 +61,10 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]
-ignore = ["E501"]  # Ignore line length
+ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]  # Allow assert in tests
+"tests/*" = ["S101"]
 
 [tool.mypy]
 python_version = "3.10"

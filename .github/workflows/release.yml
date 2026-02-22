@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install build
+
+      - name: Run quality gates
+        run: |
+          python -m ruff check src tests app.py
+          python -m mypy src app.py --ignore-missing-imports
+          python -m pytest -q
+
+      - name: Build package artifacts
+        run: |
+          python -m build
+
+      - name: Build hardened runtime image
+        run: |
+          docker build --pull --tag adml-release-smoke:${{ github.sha }} .
+
+      - name: Smoke test CLI help in locked-down container
+        run: |
+          docker run --rm \
+            --network none \
+            --read-only \
+            --tmpfs /tmp \
+            --tmpfs /home/python/.cache \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint python \
+            adml-release-smoke:${{ github.sha }} \
+            -m src.cli --help
+
+      - name: Smoke test scan command in locked-down container
+        run: |
+          printf '%s\n' 'Quarterly report highlights and normal business metrics.' | docker run --rm -i \
+            --network none \
+            --read-only \
+            --tmpfs /tmp \
+            --tmpfs /home/python/.cache \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            --entrypoint python \
+            adml-release-smoke:${{ github.sha }} \
+            -m src.cli scan --task summarize
+
+      - name: Smoke test installed CLI in isolated venv
+        run: |
+          python -m venv /tmp/adml-release-smoke
+          /tmp/adml-release-smoke/bin/python -m pip install --upgrade pip
+          /tmp/adml-release-smoke/bin/pip install dist/*.whl
+          /tmp/adml-release-smoke/bin/adml --help
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          cyclonedx-py requirements requirements.txt --output-file sbom.json --output-format json
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+            sbom.json
+          generate_release_notes: true
