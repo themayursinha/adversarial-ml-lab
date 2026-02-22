@@ -1,16 +1,8 @@
-"""
-Adversarial ML Lab - Source Package
-===================================
-Interactive demonstrations of adversarial ML attacks and defenses.
+"""Adversarial ML Security Lab source package."""
 
-This package provides:
-- Attack simulations (prompt injection, context tampering, inference evasion)
-- Defense mechanisms (context filters, isolation, uncertainty scoring)
-- Educational visualizations
+from src import attacks, defenses, domain, services, utils
 
-SECURITY NOTE: This code is for educational demonstration purposes only.
-Do not use these attack techniques against production systems without authorization.
-"""
-
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Mayur"
+
+__all__ = ["attacks", "defenses", "domain", "services", "utils"]

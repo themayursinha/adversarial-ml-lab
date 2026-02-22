@@ -359,12 +359,18 @@ class ContextIsolationServer:
                         session_id = self.create_session()
                         is_new_session = True
 
+        if session_id is None:
+            session_id = self.create_session()
+            is_new_session = True
+
         # Get or create session
         session = self.get_session(session_id)
         if session is None:
             session_id = self.create_session()
             session = self.get_session(session_id)
             is_new_session = True
+        if session is None:
+            raise RuntimeError("Failed to create or retrieve an active session.")
 
         # Redact sensitive information from user message
         redacted_message = self._redactor.redact(user_message)
