@@ -45,7 +45,7 @@ jobs:
             --network none \
             --read-only \
             --tmpfs /tmp \
-            --tmpfs /home/python/.cache \
+            --tmpfs /home/nonroot/.cache \
             --cap-drop ALL \
             --security-opt no-new-privileges \
             -e PYTHONDONTWRITEBYTECODE=1 \
@@ -59,7 +59,7 @@ jobs:
             --network none \
             --read-only \
             --tmpfs /tmp \
-            --tmpfs /home/python/.cache \
+            --tmpfs /home/nonroot/.cache \
             --cap-drop ALL \
             --security-opt no-new-privileges \
             -e PYTHONDONTWRITEBYTECODE=1 \
