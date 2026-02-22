@@ -1,53 +1,77 @@
 # Adversarial ML Security Lab
 
-Interactive demonstrations of adversarial ML attacks and defenses for LLM security.
+Interactive attack/defense toolkit for AI security engineers.
 
-## Overview
+## What This Project Demonstrates
 
-This project demonstrates three attack/defense pairs commonly encountered in LLM security:
+- Indirect prompt injection and output filtering
+- Conversation context tampering and session isolation
+- Inference evasion (obfuscation) and uncertainty-driven review
+- Local content scanning for prompt-risk and sensitive-data indicators
 
-| Attack | Defense |
-|--------|---------|
-| Indirect Prompt Injection | Context-Aware Output Filters |
-| Model Context Tampering | Context-Isolated Server with Redaction |
-| Inference Evasion | Ensemble Uncertainty Scoring |
-
-A fourth tab allows users to upload their own files or paste content for vulnerability scanning.
-
-## Installation
+## Quick Start
 
 ```bash
 git clone https://github.com/themayursinha/adversarial-ml-lab.git
 cd adversarial-ml-lab
 python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+venv/bin/python -m pip install --upgrade pip
+venv/bin/python -m pip install -r requirements.txt
+```
+
+Run web UI:
+
+```bash
+venv/bin/python app.py
+```
+
+Run CLI:
+
+```bash
+venv/bin/python -m src.cli scan --file README.md --task summarize
+venv/bin/python -m src.cli eval --dataset evals/datasets/baseline.jsonl
+venv/bin/python -m src.cli serve --host 0.0.0.0 --port 7860
+```
+
+## Architecture
+
+```text
+src/
+  attacks/      # attack generators and sample inputs
+  defenses/     # filtering, isolation, uncertainty scoring
+  domain/       # typed security event/result models
+  services/     # canonicalization, defense pipeline, evaluator
+  web/          # Gradio state, controllers, UI
+  cli.py        # CLI entrypoint (scan/eval/serve)
+tests/          # unit and integration tests
+docs/           # threat model, control mapping, deployment guidance
+evals/          # evaluation corpora
+```
+
+## Security Posture
+
+- Simulation mode by default (no external API dependency)
+- Canonicalization before output safety checks
+- Structured security events for detections and review gates
+- Governance artifacts: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
+
+## Development Commands
+
+```bash
+make lint
+make typecheck
+make test
+make security
+make eval
 ```
 
 ## Docker
 
-The application is containerized using **Chainguard Hardened Images (DHI)** for maximum security (minimal attack surface, non-root execution, zero known vulnerabilities).
+The project uses Chainguard Python images with a non-root runtime profile.
 
 ```bash
 docker build -t adversarial-ml-lab .
 docker run -p 7860:7860 adversarial-ml-lab
-```
-
-## Project Structure
-
-```
-src/
-  attacks/        # Injection, tampering, evasion implementations
-  defenses/       # Filters, isolation server, uncertainty scorer
-  utils/          # Simulated LLM client
-tests/            # Unit tests
-app.py            # Gradio web interface
-```
-
-## Testing
-
-```bash
-pytest tests/ -v
 ```
 
 ## License
