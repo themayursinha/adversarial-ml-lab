@@ -1,10 +1,15 @@
 PYTHON ?= venv/bin/python
+PIP ?= $(PYTHON) -m pip
 
-.PHONY: setup lint typecheck test security eval run
+.PHONY: setup setup-dev lint typecheck test security eval package release-check run
 
 setup:
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -r requirements.txt
+	$(PIP) install --upgrade pip
+	$(PIP) install -r requirements.txt
+
+setup-dev:
+	$(PIP) install --upgrade pip
+	$(PIP) install -r requirements-dev.txt
 
 lint:
 	$(PYTHON) -m ruff check src tests app.py
@@ -20,7 +25,20 @@ security:
 	$(PYTHON) -m pip_audit -r requirements.txt
 
 eval:
-	$(PYTHON) -m src.cli eval --dataset evals/datasets/baseline.jsonl --suite baseline
+	$(PYTHON) -m src.cli eval --suite baseline
+
+package:
+	$(PYTHON) -m build --no-isolation
+	$(PYTHON) -m twine check dist/*
+
+release-check: lint typecheck test security package
+	TMP_VENV=$$(mktemp -d /tmp/adml-release-check.XXXXXX); \
+		WHEEL_FILE=$$(ls -t dist/*.whl | head -n 1); \
+		python3 -m venv "$$TMP_VENV"; \
+		"$$TMP_VENV/bin/python" -m pip install --upgrade pip; \
+		"$$TMP_VENV/bin/pip" install "$$WHEEL_FILE"; \
+		"$$TMP_VENV/bin/adml" --help >/dev/null; \
+		"$$TMP_VENV/bin/adml" eval --suite baseline >/dev/null
 
 run:
 	$(PYTHON) app.py

@@ -12,8 +12,10 @@ JSONL rows with fields:
 ## Execution
 
 ```bash
-adml eval --dataset evals/datasets/baseline.jsonl --suite baseline
+adml eval --suite baseline
 ```
+
+`adml eval` defaults to the packaged baseline dataset. Use `--dataset` to point at a custom JSONL corpus.
 
 ## Core Metrics
 
@@ -24,5 +26,6 @@ adml eval --dataset evals/datasets/baseline.jsonl --suite baseline
 ## Reproducibility
 
 - Evaluation corpus is committed to repo.
+- The baseline corpus is packaged with the distribution for installed CLI smoke tests.
 - Simulation mode avoids non-deterministic external model calls.
 - Results can be diffed across commits in CI.

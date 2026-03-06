@@ -1,8 +1,6 @@
-"""Adversarial ML Security Lab source package."""
+"""Adversarial ML Security Lab package metadata."""
 
-from src import attacks, defenses, domain, services, utils
-
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Mayur"
 
-__all__ = ["attacks", "defenses", "domain", "services", "utils"]
+__all__ = ["__author__", "__version__"]

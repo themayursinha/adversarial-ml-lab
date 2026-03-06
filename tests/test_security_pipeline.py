@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.services import DefensePipeline, canonicalize_text, run_evaluation_suite
+from src.services import (
+    DefensePipeline,
+    canonicalize_text,
+    default_evaluation_dataset,
+    run_evaluation_suite,
+)
 
 
 def test_canonicalize_text_removes_zero_width() -> None:
@@ -36,3 +41,11 @@ def test_run_evaluation_suite_baseline() -> None:
     assert result.total_cases >= 1
     assert 0.0 <= result.pass_rate <= 1.0
     assert any(event.event_type == "evaluation_completed" for event in result.events)
+
+
+def test_default_evaluation_dataset_is_packaged() -> None:
+    with default_evaluation_dataset() as dataset:
+        result = run_evaluation_suite(dataset_path=dataset, suite_name="baseline")
+
+    assert result.total_cases >= 1
+    assert result.suite_name == "baseline"

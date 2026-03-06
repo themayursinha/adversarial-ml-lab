@@ -1,15 +1,32 @@
 # Adversarial ML Security Lab
 
-Interactive attack/defense toolkit for AI security engineers.
+Security-focused adversarial LLM lab for engineers who want to demonstrate, test, and explain common attack and defense patterns without relying on external model APIs.
 
-## What This Project Demonstrates
+## Status
+
+This project is a polished public `0.2.x` release line intended for sharing, demos, and reproducible security experiments.
+
+- Simulation-first: no live model API integration is required or enabled by default.
+- Public surface: web demo, CLI workflows, baseline evaluation suite, and supporting security docs.
+- Not a production gateway: this repo demonstrates controls and failure modes; it is not a hosted policy engine or a hardened multi-tenant service.
+
+## Who This Is For
+
+- Security engineers evaluating prompt injection, context tampering, and evasion defenses.
+- Researchers or educators who want a compact, reproducible adversarial ML demo lab.
+- Reviewers who want a repo with working CI, packaging, and security release hygiene.
+
+## What It Demonstrates
 
 - Indirect prompt injection and output filtering
 - Conversation context tampering and session isolation
-- Inference evasion (obfuscation) and uncertainty-driven review
+- Inference evasion via obfuscation and canonicalization
 - Local content scanning for prompt-risk and sensitive-data indicators
+- Reproducible evaluation with a packaged baseline dataset
 
 ## Quick Start
+
+Clone and install runtime dependencies:
 
 ```bash
 git clone https://github.com/themayursinha/adversarial-ml-lab.git
@@ -19,43 +36,48 @@ venv/bin/python -m pip install --upgrade pip
 venv/bin/python -m pip install -r requirements.txt
 ```
 
-Run web UI:
+Run the web demo:
 
 ```bash
 venv/bin/python app.py
 ```
 
-Run CLI:
+Run CLI workflows from the repo checkout:
 
 ```bash
 venv/bin/python -m src.cli scan --file README.md --task summarize
-venv/bin/python -m src.cli eval --dataset evals/datasets/baseline.jsonl
+venv/bin/python -m src.cli eval --suite baseline
 venv/bin/python -m src.cli serve --host 0.0.0.0 --port 7860
 ```
 
-## Architecture
+## What It Does Not Do
 
-```text
-src/
-  attacks/      # attack generators and sample inputs
-  defenses/     # filtering, isolation, uncertainty scoring
-  domain/       # typed security event/result models
-  services/     # canonicalization, defense pipeline, evaluator
-  web/          # Gradio state, controllers, UI
-  cli.py        # CLI entrypoint (scan/eval/serve)
-tests/          # unit and integration tests
-docs/           # threat model, control mapping, deployment guidance
-evals/          # evaluation corpora
+- It does not ship a real OpenAI-backed runtime. The codebase is intentionally simulation-first.
+- It does not claim production-grade sandboxing, tenant isolation, or SOC-ready telemetry pipelines.
+- It does not attempt broad benchmark coverage; the included dataset is a small, deterministic baseline suite.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Threat Model](docs/threat-model.md)
+- [Control Mapping](docs/control-mapping.md)
+- [Evaluation Methodology](docs/evaluation-methodology.md)
+- [Deployment Hardening](docs/deployment-hardening.md)
+- [Project Status](docs/roadmap.md)
+- [Release Checklist](docs/release-checklist.md)
+- [Security Policy](SECURITY.md)
+- [Contributing Guide](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+
+## Development and Release Checks
+
+Install development, security, and packaging tools:
+
+```bash
+venv/bin/python -m pip install -r requirements-dev.txt
 ```
 
-## Security Posture
-
-- Simulation mode by default (no external API dependency)
-- Canonicalization before output safety checks
-- Structured security events for detections and review gates
-- Governance artifacts: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
-
-## Development Commands
+Common commands:
 
 ```bash
 make lint
@@ -63,11 +85,15 @@ make typecheck
 make test
 make security
 make eval
+make package
+make release-check
 ```
+
+`make release-check` runs the local release verification path: quality gates, security checks, wheel/sdist build, `twine check`, installed CLI smoke test, and packaged baseline evaluation smoke test.
 
 ## Docker
 
-The project uses Chainguard Python images with a non-root runtime profile.
+The container image uses Chainguard Python images with a non-root runtime profile and installs runtime dependencies only.
 
 ```bash
 docker build -t adversarial-ml-lab .
@@ -78,26 +104,26 @@ docker run -p 7860:7860 adversarial-ml-lab
 
 Package publishing is automated with GitHub Actions Trusted Publishing (OIDC), so no PyPI credentials are stored on local machines.
 
-Prerequisites:
-- Configure PyPI and TestPyPI trusted publishers for this repository/workflow.
-- Create GitHub environments named `testpypi` and `pypi` (set approval rules on `pypi`).
+Before tagging a release:
+
+- run `make release-check`
+- bump `src/__init__.py`
+- review [`docs/release-checklist.md`](docs/release-checklist.md)
 
 Release flow:
 
 ```bash
-# 1) bump version in pyproject.toml
-git add pyproject.toml
+git add src/__init__.py
 git commit -m "release: vX.Y.Z"
 git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin main --follow-tags
 ```
 
-Tag push (`v*`) triggers `.github/workflows/release.yml`.
+Pushing a `v*` tag triggers `.github/workflows/release.yml`. A successful release then triggers `.github/workflows/publish.yml` for:
 
-A successful Release workflow then triggers `.github/workflows/publish.yml` for:
 - TestPyPI publish
-- install smoke test against TestPyPI
-- PyPI publish (after `pypi` environment approval, if configured)
+- installed-package smoke test from TestPyPI
+- PyPI publish after `pypi` environment approval, if configured
 
 ## License
 

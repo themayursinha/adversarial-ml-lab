@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adversarial-ml-lab"
-version = "0.2.0"
-description = "Interactive demonstrations of adversarial ML attacks and defenses"
+dynamic = ["version"]
+description = "Adversarial LLM attack-and-defense lab for security engineers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -29,9 +29,10 @@ keywords = [
     "ai-safety"
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -43,12 +44,21 @@ classifiers = [
 adml = "src.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/mayur/adversarial-ml-lab"
-Documentation = "https://github.com/mayur/adversarial-ml-lab#readme"
+Homepage = "https://github.com/themayursinha/adversarial-ml-lab"
+Documentation = "https://github.com/themayursinha/adversarial-ml-lab#readme"
+Repository = "https://github.com/themayursinha/adversarial-ml-lab"
+Issues = "https://github.com/themayursinha/adversarial-ml-lab/issues"
+Security = "https://github.com/themayursinha/adversarial-ml-lab/security/policy"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src", "src.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "src.__version__"}
+
+[tool.setuptools.package-data]
+"src.resources" = ["datasets/*.jsonl"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

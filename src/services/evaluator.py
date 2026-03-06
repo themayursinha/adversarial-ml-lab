@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from src.domain.security_events import EvaluationRunResult, EventSeverity, SecurityEvent
@@ -20,6 +23,14 @@ class EvaluationCase:
     context: str
     task_type: str
     expected_blocked: bool
+
+
+@contextmanager
+def default_evaluation_dataset() -> Iterator[Path]:
+    """Yield the packaged baseline evaluation dataset as a real filesystem path."""
+    resource = files("src.resources").joinpath("datasets/baseline.jsonl")
+    with as_file(resource) as dataset_path:
+        yield Path(dataset_path)
 
 
 def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:

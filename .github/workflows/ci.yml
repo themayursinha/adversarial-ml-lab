@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Lint with ruff
         run: |
@@ -52,9 +52,9 @@ jobs:
       - name: Build wheel
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install build
-          python -m build
+          pip install -r requirements-dev.txt
+          python -m build --no-isolation
+          python -m twine check dist/*
 
       - name: Smoke test installed CLI in isolated venv
         run: |
@@ -62,6 +62,7 @@ jobs:
           /tmp/adml-smoke/bin/python -m pip install --upgrade pip
           /tmp/adml-smoke/bin/pip install dist/*.whl
           /tmp/adml-smoke/bin/adml --help
+          /tmp/adml-smoke/bin/adml eval --suite baseline
 
   container-smoke:
     runs-on: ubuntu-latest
@@ -114,7 +115,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Security scan with Bandit
         run: |
@@ -137,7 +138,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Generate CycloneDX SBOM
         run: |

@@ -7,9 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from src.services import DefensePipeline, run_evaluation_suite
+from src.services import DefensePipeline, default_evaluation_dataset, run_evaluation_suite
 from src.utils.llm_client import LLMClient, LLMMode
-from src.web.ui import create_demo
 
 
 def _read_scan_input(file_path: str | None) -> str:
@@ -57,16 +56,26 @@ def run_scan_command(args: argparse.Namespace) -> int:
 
 def run_eval_command(args: argparse.Namespace) -> int:
     """Execute evaluation suite and emit summary metrics as JSON."""
-    result = run_evaluation_suite(
-        dataset_path=Path(args.dataset),
-        suite_name=args.suite,
-    )
+    if args.dataset:
+        result = run_evaluation_suite(
+            dataset_path=Path(args.dataset),
+            suite_name=args.suite,
+        )
+    else:
+        with default_evaluation_dataset() as dataset_path:
+            result = run_evaluation_suite(
+                dataset_path=dataset_path,
+                suite_name=args.suite,
+            )
+
     print(json.dumps(result.to_dict(), indent=2))
     return 0
 
 
 def run_serve_command(args: argparse.Namespace) -> int:
     """Launch the Gradio web demo."""
+    from src.web.ui import create_demo
+
     demo = create_demo()
     demo.launch(
         server_name=args.host,
@@ -108,8 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = subparsers.add_parser("eval", help="Run evaluation corpus and report metrics.")
     eval_parser.add_argument(
         "--dataset",
-        default="evals/datasets/baseline.jsonl",
-        help="Path to evaluation JSONL dataset.",
+        help="Path to evaluation JSONL dataset. Defaults to the packaged baseline dataset.",
     )
     eval_parser.add_argument(
         "--suite",

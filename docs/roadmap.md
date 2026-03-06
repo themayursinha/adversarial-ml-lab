@@ -1,20 +1,29 @@
-# Roadmap
+# Project Status
 
-## 0.2.x (Current)
+## Current Release Line: 0.2.x
 
-- Modularized web stack (`src/web`).
-- Added service layer and canonicalization pipeline.
-- Added CLI (`adml`) for scan/eval/serve workflows.
-- Added governance and security policy artifacts.
+The current release line is intended to be publicly shareable and reproducible for security engineers.
 
-## 0.3.x
+Completed in this line:
 
-- Expand eval corpus with false-positive/false-negative labels.
-- Add policy packs for agentic workflow scenarios.
-- Add structured telemetry export sinks.
+- Modular web stack in `src/web`
+- Service-layer defense pipeline and canonicalization flow
+- CLI workflows for `scan`, `eval`, and `serve`
+- Packaged baseline evaluation dataset for installed CLI use
+- Governance, release, and supply-chain documentation
 
-## 1.0.0
+## Stable Public Surface for This Release
 
-- Stabilize public service and domain interfaces.
-- Publish benchmark report and threat-model v1.
-- Signed release artifacts with SBOM and provenance attestations.
+- Web demo launched through `app.py`
+- CLI entrypoints exposed through `src.cli`
+- Baseline evaluation workflow and dataset schema
+- Structured security event outputs from the service layer
+
+## Future Work
+
+These are possible future extensions, not release commitments:
+
+- Expand the eval corpus with labeled false-positive and false-negative cases
+- Add policy packs for more agentic workflow scenarios
+- Add structured telemetry export sinks
+- Add release provenance and signature attestations beyond the current SBOM flow

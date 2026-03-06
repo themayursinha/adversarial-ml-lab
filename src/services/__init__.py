@@ -2,7 +2,12 @@
 
 from src.services.canonicalization import CanonicalizationResult, canonicalize_text
 from src.services.defense_pipeline import DefensePipeline, PipelineResult
-from src.services.evaluator import EvaluationCase, load_evaluation_cases, run_evaluation_suite
+from src.services.evaluator import (
+    EvaluationCase,
+    default_evaluation_dataset,
+    load_evaluation_cases,
+    run_evaluation_suite,
+)
 
 __all__ = [
     "CanonicalizationResult",
@@ -10,6 +15,7 @@ __all__ = [
     "EvaluationCase",
     "PipelineResult",
     "canonicalize_text",
+    "default_evaluation_dataset",
     "load_evaluation_cases",
     "run_evaluation_suite",
 ]
