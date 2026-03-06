@@ -40,10 +40,9 @@ git push origin main --follow-tags
 GitHub Actions flow:
 
 - `.github/workflows/release.yml` builds artifacts, runs release smoke tests, and attaches release assets
-- `.github/workflows/publish.yml` publishes to TestPyPI, runs an installed-package smoke test, then publishes to PyPI after approval
 
 ## 5. Post-Release Checks
 
 - Verify the GitHub release includes wheel, sdist, and SBOM artifacts
-- Verify the TestPyPI or PyPI install exposes `adml`
+- Optionally verify a downloaded release wheel exposes `adml`
 - Verify `adml eval --suite baseline` works from the published package

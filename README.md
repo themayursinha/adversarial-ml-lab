@@ -100,9 +100,7 @@ docker build -t adversarial-ml-lab .
 docker run -p 7860:7860 adversarial-ml-lab
 ```
 
-## Release and Publish
-
-Package publishing is automated with GitHub Actions Trusted Publishing (OIDC), so no PyPI credentials are stored on local machines.
+## Release
 
 Before tagging a release:
 
@@ -119,11 +117,15 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin main --follow-tags
 ```
 
-Pushing a `v*` tag triggers `.github/workflows/release.yml`. A successful release then triggers `.github/workflows/publish.yml` for:
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which:
 
-- TestPyPI publish
-- installed-package smoke test from TestPyPI
-- PyPI publish after `pypi` environment approval, if configured
+- reruns quality and security checks
+- builds wheel and sdist artifacts
+- smoke-tests the packaged CLI and container image
+- generates an SBOM
+- creates a GitHub Release with the build artifacts attached
+
+The project is intentionally distributed through GitHub Releases only. PyPI/TestPyPI publishing is not part of the release path.
 
 ## License
 
