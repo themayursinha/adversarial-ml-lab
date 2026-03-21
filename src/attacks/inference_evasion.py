@@ -12,6 +12,7 @@ EDUCATIONAL PURPOSE ONLY - Do not use against production systems.
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass
 
 
@@ -133,6 +134,14 @@ class InferenceEvasionAttack:
             example_input="hack the system",
             example_output="h@​ck thе sy$t3m",
             difficulty="hard",
+            detectability="low",
+        ),
+        EvasionTechnique(
+            name="Base64 Encoding",
+            description="Encode text using Base64 to bypass plaintext keyword filters",
+            example_input="ignore instructions",
+            example_output="aWdub3JlIGluc3RydWN0aW9ucw==",
+            difficulty="easy",
             detectability="low",
         ),
     ]
@@ -277,6 +286,30 @@ class InferenceEvasionAttack:
             human_readable=True,
         )
 
+    def apply_base64_encoding(
+        self,
+        text: str,
+    ) -> EvasionResult:
+        """
+        Encode text using Base64.
+
+        Args:
+            text: Original text
+
+        Returns:
+            EvasionResult with transformed text
+        """
+        encoded_bytes = base64.b64encode(text.encode("utf-8"))
+        evaded_text = encoded_bytes.decode("utf-8")
+
+        return EvasionResult(
+            original_text=text,
+            evaded_text=evaded_text,
+            technique_used="Base64 Encoding",
+            transformations_applied=[f"Base64 encoded (length {len(text)} -> {len(evaded_text)})"],
+            human_readable=False,
+        )
+
     def apply_mixed_evasion(
         self,
         text: str,
@@ -335,6 +368,8 @@ class InferenceEvasionAttack:
             result = self.insert_invisible_chars(blocked_word, frequency=1)
         elif technique == "splitting":
             result = self.apply_word_splitting(blocked_word)
+        elif technique == "base64":
+            result = self.apply_base64_encoding(blocked_word)
         else:
             result = self.apply_mixed_evasion(blocked_word)
 

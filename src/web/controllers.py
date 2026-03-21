@@ -338,6 +338,8 @@ def demo_inference_evasion(
         result = state.evasion_attack.insert_invisible_chars(input_text, frequency=frequency)
     elif "split" in technique_name:
         result = state.evasion_attack.apply_word_splitting(input_text)
+    elif "base64" in technique_name:
+        result = state.evasion_attack.apply_base64_encoding(input_text)
     else:
         result = state.evasion_attack.apply_mixed_evasion(input_text)
 

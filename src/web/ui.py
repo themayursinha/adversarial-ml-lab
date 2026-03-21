@@ -176,6 +176,7 @@ def create_demo() -> gr.Blocks:
                             "Unicode Homoglyphs",
                             "Invisible Characters",
                             "Word Splitting",
+                            "Base64 Encoding",
                             "Mixed Techniques",
                         ],
                         value="Mixed Techniques",
