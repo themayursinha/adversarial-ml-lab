@@ -68,7 +68,7 @@ def run_eval_command(args: argparse.Namespace) -> int:
                 suite_name=args.suite,
             )
 
-    print(json.dumps(result.to_dict(), indent=2))
+    print(json.dumps(result.to_dict(include_case_results=getattr(args, "show_cases", False)), indent=2))
     return 0
 
 
@@ -123,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--suite",
         default="baseline",
         help="Suite name for reporting.",
+    )
+    eval_parser.add_argument(
+        "--show-cases",
+        action="store_true",
+        help="Include per-case evaluation results in the JSON output.",
     )
     eval_parser.set_defaults(func=run_eval_command)
 

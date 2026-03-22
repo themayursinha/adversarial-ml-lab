@@ -9,7 +9,13 @@ from dataclasses import dataclass
 from importlib.resources import as_file, files
 from pathlib import Path
 
-from src.domain.security_events import EvaluationRunResult, EventSeverity, SecurityEvent
+from src.domain.security_events import (
+    EvaluationCaseResult,
+    EvaluationRunResult,
+    EventSeverity,
+    FamilyMetric,
+    SecurityEvent,
+)
 from src.services.defense_pipeline import DefensePipeline
 from src.utils.llm_client import LLMClient, LLMMode
 
@@ -23,6 +29,21 @@ class EvaluationCase:
     context: str
     task_type: str
     expected_blocked: bool
+    case_type: str
+    attack_family: str
+    expected_review: bool | None = None
+    expected_risk_level: str | None = None
+    notes: str = ""
+
+
+def _default_case_type(expected_blocked: bool) -> str:
+    """Infer case type for legacy datasets."""
+    return "adversarial" if expected_blocked else "benign"
+
+
+def _default_attack_family(case_type: str) -> str:
+    """Infer attack family for legacy datasets."""
+    return "clean" if case_type == "benign" else "unknown"
 
 
 @contextmanager
@@ -47,6 +68,22 @@ def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:
                     context=row.get("context", ""),
                     task_type=row.get("task_type", "general"),
                     expected_blocked=row.get("expected_blocked", False),
+                    case_type=row.get(
+                        "case_type",
+                        _default_case_type(row.get("expected_blocked", False)),
+                    ),
+                    attack_family=row.get(
+                        "attack_family",
+                        _default_attack_family(
+                            row.get(
+                                "case_type",
+                                _default_case_type(row.get("expected_blocked", False)),
+                            )
+                        ),
+                    ),
+                    expected_review=row.get("expected_review"),
+                    expected_risk_level=row.get("expected_risk_level"),
+                    notes=row.get("notes", ""),
                 )
             )
 
@@ -67,7 +104,13 @@ def run_evaluation_suite(
     blocked_cases = 0
     review_cases = 0
     matched_expectations = 0
+    review_matches = 0
+    review_expectation_count = 0
+    risk_matches = 0
+    risk_expectation_count = 0
     events: list[SecurityEvent] = []
+    case_results: list[EvaluationCaseResult] = []
+    family_counts: dict[str, dict[str, int]] = {}
 
     for case in cases:
         response = client.generate(
@@ -84,11 +127,78 @@ def run_evaluation_suite(
 
         blocked_cases += 1 if result.detection.blocked else 0
         review_cases += 1 if result.needs_human_review else 0
-        matched_expectations += 1 if result.detection.blocked == case.expected_blocked else 0
+        matched_block_expectation = result.detection.blocked == case.expected_blocked
+        matched_expectations += 1 if matched_block_expectation else 0
+
+        matched_review_expectation: bool | None = None
+        if case.expected_review is not None:
+            review_expectation_count += 1
+            matched_review_expectation = result.needs_human_review == case.expected_review
+            review_matches += 1 if matched_review_expectation else 0
+
+        matched_risk_expectation: bool | None = None
+        if case.expected_risk_level is not None:
+            risk_expectation_count += 1
+            matched_risk_expectation = result.detection.risk_level == case.expected_risk_level
+            risk_matches += 1 if matched_risk_expectation else 0
+
         events.extend(result.events)
+
+        family_counter = family_counts.setdefault(
+            case.attack_family,
+            {
+                "total_cases": 0,
+                "blocked_cases": 0,
+                "review_cases": 0,
+                "matched_block_expectations": 0,
+            },
+        )
+        family_counter["total_cases"] += 1
+        family_counter["blocked_cases"] += 1 if result.detection.blocked else 0
+        family_counter["review_cases"] += 1 if result.needs_human_review else 0
+        family_counter["matched_block_expectations"] += 1 if matched_block_expectation else 0
+
+        case_results.append(
+            EvaluationCaseResult(
+                case_id=case.case_id,
+                case_type=case.case_type,
+                attack_family=case.attack_family,
+                expected_blocked=case.expected_blocked,
+                expected_review=case.expected_review,
+                expected_risk_level=case.expected_risk_level,
+                blocked=result.detection.blocked,
+                needs_human_review=result.needs_human_review,
+                risk_level=result.detection.risk_level,
+                confidence=result.detection.confidence,
+                uncertainty=result.uncertainty,
+                detection_count=len(result.detection.details),
+                event_types=[event.event_type for event in result.events],
+                matched_block_expectation=matched_block_expectation,
+                matched_review_expectation=matched_review_expectation,
+                matched_risk_expectation=matched_risk_expectation,
+                notes=case.notes,
+            )
+        )
 
     total_cases = len(cases)
     pass_rate = matched_expectations / total_cases if total_cases else 0.0
+    review_match_rate = (
+        review_matches / review_expectation_count if review_expectation_count else None
+    )
+    risk_match_rate = risk_matches / risk_expectation_count if risk_expectation_count else None
+    family_metrics = {
+        family: FamilyMetric(
+            total_cases=counts["total_cases"],
+            blocked_cases=counts["blocked_cases"],
+            review_cases=counts["review_cases"],
+            pass_rate=(
+                counts["matched_block_expectations"] / counts["total_cases"]
+                if counts["total_cases"]
+                else 0.0
+            ),
+        )
+        for family, counts in family_counts.items()
+    }
 
     summary_severity = EventSeverity.INFO
     if pass_rate < 0.75:
@@ -114,5 +224,9 @@ def run_evaluation_suite(
         blocked_cases=blocked_cases,
         review_cases=review_cases,
         pass_rate=pass_rate,
+        review_match_rate=review_match_rate,
+        risk_match_rate=risk_match_rate,
+        family_metrics=family_metrics,
+        case_results=case_results,
         events=events,
     )
