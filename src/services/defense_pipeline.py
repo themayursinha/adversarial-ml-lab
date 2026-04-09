@@ -36,7 +36,9 @@ class DefensePipeline:
         context_filter: ContextAwareFilter | None = None,
         uncertainty_scorer: EnsembleUncertaintyScorer | None = None,
     ) -> None:
-        self.context_filter = context_filter or ContextAwareFilter(sensitivity=0.7, block_on_detection=True)
+        self.context_filter = context_filter or ContextAwareFilter(
+            sensitivity=0.7, block_on_detection=True
+        )
         self.uncertainty_scorer = uncertainty_scorer or EnsembleUncertaintyScorer(
             human_review_threshold=0.5
         )

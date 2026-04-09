@@ -68,7 +68,11 @@ def run_eval_command(args: argparse.Namespace) -> int:
                 suite_name=args.suite,
             )
 
-    print(json.dumps(result.to_dict(include_case_results=getattr(args, "show_cases", False)), indent=2))
+    print(
+        json.dumps(
+            result.to_dict(include_case_results=getattr(args, "show_cases", False)), indent=2
+        )
+    )
     return 0
 
 
@@ -134,7 +138,9 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser = subparsers.add_parser("serve", help="Run the web demo server.")
     serve_parser.add_argument("--host", default="127.0.0.1", help="Host bind address.")
     serve_parser.add_argument("--port", type=int, default=7860, help="Server port.")
-    serve_parser.add_argument("--share", action="store_true", help="Enable public Gradio share link.")
+    serve_parser.add_argument(
+        "--share", action="store_true", help="Enable public Gradio share link."
+    )
     serve_parser.set_defaults(func=run_serve_command)
 
     return parser
