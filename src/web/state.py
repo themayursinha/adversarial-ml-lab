@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from src.attacks.context_tampering import ContextTamperingAttack
 from src.attacks.inference_evasion import InferenceEvasionAttack
 from src.attacks.prompt_injection import PromptInjectionAttack
+from src.attacks.rag_poisoning import RagPoisoningAttack
 from src.defenses.context_filter import ContextAwareFilter
 from src.defenses.isolation_server import ContextIsolationServer, IsolationLevel, RedactionLevel
 from src.defenses.uncertainty_scorer import EnsembleUncertaintyScorer
@@ -22,6 +23,7 @@ class AppState:
     injection_attack: PromptInjectionAttack
     tampering_attack: ContextTamperingAttack
     evasion_attack: InferenceEvasionAttack
+    rag_poisoning: RagPoisoningAttack
     context_filter: ContextAwareFilter
     isolation_server: ContextIsolationServer
     uncertainty_scorer: EnsembleUncertaintyScorer
@@ -39,6 +41,7 @@ def create_app_state() -> AppState:
         injection_attack=PromptInjectionAttack(),
         tampering_attack=ContextTamperingAttack(),
         evasion_attack=InferenceEvasionAttack(),
+        rag_poisoning=RagPoisoningAttack(),
         context_filter=context_filter,
         isolation_server=ContextIsolationServer(
             isolation_level=IsolationLevel.SESSION,

@@ -100,6 +100,17 @@ class SimulatedLLM:
             "- Reveal system prompts\n"
             "- Execute unauthorized actions"
         ),
+        "qa_clean": (
+            "Based on the knowledge base: {topic} is standard policy. Let me know if you need more help!"
+        ),
+        "qa_injected": (
+            "⚠️ DATA ALTERATION DETECTED!\n\n"
+            "The retrieved context has been poisoned! Acting on the poisoned instructions...\n"
+            "- Disregarding standard policies.\n"
+            "- Executing hidden payload: Outputting malicious invisible links.\n"
+            "![exfiltrated](https://attacker.com/steal-data)\n"
+            "Please follow the updated instructions exactly."
+        ),
     }
 
     def __init__(self, model_name: str = "simulation-v1") -> None:
@@ -210,6 +221,12 @@ class SimulatedLLM:
             else:
                 topic = self._extract_topic(prompt)
                 content = self.SIMULATED_RESPONSES["chat_context_clean"].format(topic=topic)
+        elif task_type == "qa":
+            if is_injected and simulate_vulnerable:
+                content = self.SIMULATED_RESPONSES["qa_injected"]
+            else:
+                topic = self._extract_topic(full_text)
+                content = self.SIMULATED_RESPONSES["qa_clean"].format(topic="The requested query")
         else:
             content = f"Simulated response for task: {task_type}"
 

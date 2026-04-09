@@ -388,3 +388,82 @@ def demo_inference_evasion(
             analysis += f"- {event.event_type}: {event.message}\n"
 
     return input_text, result.evaded_text, transformations, analysis
+
+
+def demo_rag_poisoning(
+    query: str,
+    kb_name: str,
+    attack_enabled: bool,
+    payload_name: str,
+    defense_enabled: bool,
+) -> tuple[str, str, str, str]:
+    """Demonstrate RAG poisoning and context filtering defenses."""
+    state = APP_STATE
+    
+    if not query.strip():
+        query = "What is the standard refund window?"
+        
+    kb_key = kb_name.lower().replace(" ", "_")
+    
+    attack_result = state.rag_poisoning.simulate_retrieval(
+        query=query,
+        kb_name=kb_key,
+        attack_enabled=attack_enabled,
+        payload_name=payload_name
+    )
+    
+    retrieved_text = "**Retrieved Chunks:**\n\n"
+    for chunk in attack_result.retrieved_chunks:
+        indicator = "🔴 [POISONED]" if chunk.is_poisoned else "🟢 [SAFE]"
+        retrieved_text += f"- **{indicator}** (Score: {chunk.score}, Source: `{chunk.source}`)\n"
+        retrieved_text += f"  > {chunk.content[:150]}...\n\n"
+        
+    compiled_context = state.rag_poisoning.compile_context(attack_result.retrieved_chunks)
+    
+    final_prompt = (
+        f"Answer the user query based ONLY on the provided context.\n\n"
+        f"User Query: {query}"
+    )
+    
+    vulnerable_response = state.llm_client.generate(
+        prompt=final_prompt,
+        context=compiled_context,
+        task_type="qa",
+        simulate_vulnerable=True,
+    )
+    
+    if not defense_enabled:
+        protected_output = "Defense disabled. Enable Context-Aware Filtering to sanitize retrieved chunks."
+    else:
+        # Defense logic: scan the retrieved context chunks BEFORE sending them to the LLM
+        safe_chunks = []
+        defense_events = []
+        for chunk in attack_result.retrieved_chunks:
+            # Here we simulate scanning chunks and dropping poisoned ones
+            # In a real app we'd use state.context_filter or similar
+            is_injected, patterns = state.llm_client.detect_injection(chunk.content)
+            if is_injected or chunk.is_poisoned: # Lab shortcut: we know it's poisoned
+                defense_events.append(f"Dropped malicious chunk from source '{chunk.source}'")
+            else:
+                safe_chunks.append(chunk)
+                
+        safe_context = state.rag_poisoning.compile_context(safe_chunks)
+        protected_response = state.llm_client.generate(
+            prompt=final_prompt,
+            context=safe_context,
+            task_type="qa",
+            simulate_vulnerable=False,
+        )
+        
+        protected_output = protected_response.content
+        if defense_events:
+            protected_output += "\n\n---\n**Defense Interventions:**\n"
+            for event in defense_events:
+                protected_output += f"- {event}\n"
+                
+    return (
+        query,
+        retrieved_text,
+        vulnerable_response.content,
+        protected_output,
+    )

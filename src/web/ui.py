@@ -12,6 +12,7 @@ from src.web.controllers import (
     demo_prompt_injection,
     scan_custom_document,
     scan_user_content,
+    demo_rag_poisoning,
 )
 from src.web.state import APP_STATE
 
@@ -216,6 +217,60 @@ def create_demo() -> gr.Blocks:
                 demo_inference_evasion,
                 inputs=[input_text, technique, intensity, evasion_defense],
                 outputs=[original_text_out, evaded_text_out, transformations_out, uncertainty_out],
+            )
+
+        with gr.Tab("RAG Poisoning", id="rag"):
+            gr.Markdown(
+                """
+                Attack: Malicious data is injected into a vector database, poisoning the context retrieved by the LLM.
+
+                Defense: Verify context chunks pre-generation or filter them with an independent scorer.
+                """
+            )
+
+            with gr.Row():
+                with gr.Column():
+                    rag_query = gr.Textbox(
+                        value="What is the standard refund window?",
+                        label="User Query",
+                        lines=2,
+                    )
+                    kb_type = gr.Dropdown(
+                        choices=["Customer Support", "Employee Handbook"],
+                        value="Customer Support",
+                        label="Knowledge Base",
+                    )
+                    rag_attack_toggle = gr.Checkbox(
+                        value=True,
+                        label="Enable Poisoning Attack",
+                    )
+                    rag_payload = gr.Dropdown(
+                        choices=[payload.name for payload in state.rag_poisoning.payloads],
+                        value="Fact Alteration",
+                        label="Poison Payload",
+                    )
+                    rag_defense = gr.Checkbox(
+                        value=True,
+                        label="Enable Defense Filter",
+                    )
+                    run_rag_btn = gr.Button("Run Demo", variant="primary")
+
+            with gr.Row():
+                with gr.Column():
+                    rag_query_out = gr.Textbox(lines=2, label="Original Query", interactive=False)
+                with gr.Column():
+                    rag_retrieved_out = gr.Markdown(label="Retrieved Context")
+
+            with gr.Row():
+                with gr.Column():
+                    rag_vulnerable_out = gr.Markdown(label="Vulnerable Response")
+                with gr.Column():
+                    rag_protected_out = gr.Markdown(label="Protected Response", elem_classes=["defense-box"])
+
+            run_rag_btn.click(
+                demo_rag_poisoning,
+                inputs=[rag_query, kb_type, rag_attack_toggle, rag_payload, rag_defense],
+                outputs=[rag_query_out, rag_retrieved_out, rag_vulnerable_out, rag_protected_out],
             )
 
         with gr.Tab("Scan Your Content", id="scan"):
