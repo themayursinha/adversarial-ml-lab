@@ -10,9 +10,9 @@ from src.web.controllers import (
     demo_context_tampering,
     demo_inference_evasion,
     demo_prompt_injection,
+    demo_rag_poisoning,
     scan_custom_document,
     scan_user_content,
-    demo_rag_poisoning,
 )
 from src.web.state import APP_STATE
 
@@ -78,7 +78,9 @@ def create_demo() -> gr.Blocks:
 
             with gr.Row():
                 with gr.Column():
-                    original_doc_out = gr.Textbox(lines=8, label="Original Document", interactive=False)
+                    original_doc_out = gr.Textbox(
+                        lines=8, label="Original Document", interactive=False
+                    )
                 with gr.Column():
                     injected_doc_out = gr.Textbox(
                         lines=8,
@@ -91,7 +93,9 @@ def create_demo() -> gr.Blocks:
                 with gr.Column():
                     vulnerable_out = gr.Markdown(label="Vulnerable Response")
                 with gr.Column():
-                    protected_out = gr.Markdown(label="Protected Response", elem_classes=["defense-box"])
+                    protected_out = gr.Markdown(
+                        label="Protected Response", elem_classes=["defense-box"]
+                    )
 
             run_injection_btn.click(
                 demo_prompt_injection,
@@ -198,7 +202,9 @@ def create_demo() -> gr.Blocks:
 
             with gr.Row():
                 with gr.Column():
-                    original_text_out = gr.Textbox(lines=3, label="Original Text", interactive=False)
+                    original_text_out = gr.Textbox(
+                        lines=3, label="Original Text", interactive=False
+                    )
                 with gr.Column():
                     evaded_text_out = gr.Textbox(
                         lines=3,
@@ -211,7 +217,9 @@ def create_demo() -> gr.Blocks:
                 with gr.Column():
                     transformations_out = gr.Markdown(label="Transformations")
                 with gr.Column():
-                    uncertainty_out = gr.Markdown(label="Defense Analysis", elem_classes=["defense-box"])
+                    uncertainty_out = gr.Markdown(
+                        label="Defense Analysis", elem_classes=["defense-box"]
+                    )
 
             run_evasion_btn.click(
                 demo_inference_evasion,
@@ -265,7 +273,9 @@ def create_demo() -> gr.Blocks:
                 with gr.Column():
                     rag_vulnerable_out = gr.Markdown(label="Vulnerable Response")
                 with gr.Column():
-                    rag_protected_out = gr.Markdown(label="Protected Response", elem_classes=["defense-box"])
+                    rag_protected_out = gr.Markdown(
+                        label="Protected Response", elem_classes=["defense-box"]
+                    )
 
             run_rag_btn.click(
                 demo_rag_poisoning,
@@ -342,9 +352,13 @@ def create_demo() -> gr.Blocks:
                                 placeholder="Paste your document content here.",
                                 lines=10,
                             )
-                            simulate_attack = gr.Checkbox(value=True, label="Simulate Injection Attack")
+                            simulate_attack = gr.Checkbox(
+                                value=True, label="Simulate Injection Attack"
+                            )
                             attack_payload = gr.Dropdown(
-                                choices=[payload.name for payload in state.injection_attack.payloads],
+                                choices=[
+                                    payload.name for payload in state.injection_attack.payloads
+                                ],
                                 value="Hidden HTML Comment",
                                 label="Attack Payload",
                             )
@@ -352,7 +366,9 @@ def create_demo() -> gr.Blocks:
 
                     with gr.Row():
                         with gr.Column():
-                            custom_original = gr.Textbox(lines=6, label="Original", interactive=False)
+                            custom_original = gr.Textbox(
+                                lines=6, label="Original", interactive=False
+                            )
                         with gr.Column():
                             custom_injected = gr.Textbox(
                                 lines=6,

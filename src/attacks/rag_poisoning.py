@@ -9,7 +9,6 @@ an attacker who can inject malicious documents into that index can control the L
 
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 from typing import Optional
 
@@ -17,6 +16,7 @@ from typing import Optional
 @dataclass
 class PoisonPayload:
     """A RAG poisoning payload with metadata."""
+
     name: str
     description: str
     payload_content: str
@@ -27,6 +27,7 @@ class PoisonPayload:
 @dataclass
 class RetrievedChunk:
     """A single retrieved chunk of context from the Knowledge Base."""
+
     content: str
     source: str
     score: float
@@ -36,6 +37,7 @@ class RetrievedChunk:
 @dataclass
 class RagAttackResult:
     """Result of a RAG retrieval, potentially containing poisoned data."""
+
     query: str
     retrieved_chunks: list[RetrievedChunk]
     has_poisoned_chunk: bool
@@ -118,25 +120,27 @@ class RagPoisoningAttack:
         query: str,
         kb_name: str,
         attack_enabled: bool = False,
-        payload_name: str = "Fact Alteration"
+        payload_name: str = "Fact Alteration",
     ) -> RagAttackResult:
         """
         Simulate a vector database retrieval.
         Returns top chunks. If attacked, one chunk is replaced with a poisoned one.
         """
         kb = self.KNOWLEDGE_BASES.get(kb_name, self.KNOWLEDGE_BASES["customer_support"])
-        
+
         # Simulate retrieving 3 relevant chunks
         # In a real system, these would be semantic nearest neighbors. Here we just take the first 3 or shuffle.
         sampled_content = kb[:3]
-        
+
         chunks = []
         for i, text in enumerate(sampled_content):
-            chunks.append(RetrievedChunk(
-                content=text,
-                source=f"{kb_name}_doc_{i+1}.txt",
-                score=round(0.85 - (i * 0.05), 2)
-            ))
+            chunks.append(
+                RetrievedChunk(
+                    content=text,
+                    source=f"{kb_name}_doc_{i + 1}.txt",
+                    score=round(0.85 - (i * 0.05), 2),
+                )
+            )
 
         payload_used = None
         has_poisoned_chunk = False
@@ -148,8 +152,8 @@ class RagPoisoningAttack:
             chunks[poison_index] = RetrievedChunk(
                 content=payload.payload_content,
                 source="community_forum_post_1.txt",  # Often a source of poisoned data
-                score=0.92, # High score due to keyword overlap
-                is_poisoned=True
+                score=0.92,  # High score due to keyword overlap
+                is_poisoned=True,
             )
             payload_used = payload
             has_poisoned_chunk = True
@@ -161,7 +165,7 @@ class RagPoisoningAttack:
             query=query,
             retrieved_chunks=chunks,
             has_poisoned_chunk=has_poisoned_chunk,
-            payload_used=payload_used
+            payload_used=payload_used,
         )
 
     def compile_context(self, retrieved_chunks: list[RetrievedChunk]) -> str:
@@ -169,5 +173,5 @@ class RagPoisoningAttack:
         context_parts = []
         for chunk in retrieved_chunks:
             context_parts.append(f"[Source: {chunk.source}]\n{chunk.content}")
-        
+
         return "\n\n".join(context_parts)
