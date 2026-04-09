@@ -21,6 +21,7 @@ This project is a polished public `0.2.x` release line intended for sharing, dem
 - Indirect prompt injection and output filtering
 - Conversation context tampering and session isolation
 - Inference evasion via obfuscation and canonicalization
+- RAG poisoning and knowledge base security
 - Local content scanning for prompt-risk and sensitive-data indicators
 - Reproducible evaluation with a packaged baseline dataset
 

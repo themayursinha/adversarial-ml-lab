@@ -10,6 +10,7 @@ Completed in this line:
 - Service-layer defense pipeline and canonicalization flow
 - CLI workflows for `scan`, `eval`, and `serve`
 - Packaged baseline evaluation dataset for installed CLI use
+- RAG poisoning simulation and defense laboratory
 - Governance, release, and supply-chain documentation
 
 ## Stable Public Surface for This Release
@@ -17,6 +18,7 @@ Completed in this line:
 - Web demo launched through `app.py`
 - CLI entrypoints exposed through `src.cli`
 - Baseline evaluation workflow and dataset schema
+- RAG poisoning demonstration tab in Web UI
 - Structured security event outputs from the service layer
 
 ## Future Work
@@ -33,7 +35,6 @@ These are possible future extensions, not release commitments:
 - **Multi-Turn Jailbreaks**: Simulate conditioning an LLM over several messages to bypass alignment filters over time.
 - **Data Exfiltration Architectures**: Showcase how hijacked models securely exfiltrate data (e.g., Markdown image rendering exfiltration).
 - **"Many-Shot" Evasion**: Demonstrate context-window stuffing with hundreds of fake benign Q&A pairs.
-- **RAG Poisoning**: Introduce attack scenarios for Retrieval-Augmented Generation where external documents are poisoned.
 
 ### Enhanced Defense Mechanisms
 - **Constitutional / Self-Correction Loop**: Implement an asynchronous reviewer/Judge LLM to evaluate the primary model's output before surfacing it.
