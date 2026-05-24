@@ -1,6 +1,7 @@
 """Defense modules for adversarial ML mitigations."""
 
 from src.defenses.anomaly_scorer import AnomalyScore, TextAnomalyScorer
+from src.defenses.constitutional import ConstitutionalResult, ConstitutionalReviewer
 from src.defenses.context_filter import ContextAwareFilter, FilterResult, RiskLevel
 from src.defenses.isolation_server import (
     ContentRedactor,
@@ -21,6 +22,8 @@ from src.defenses.uncertainty_scorer import (
 __all__ = [
     "AnomalyScore",
     "ConfidenceLevel",
+    "ConstitutionalResult",
+    "ConstitutionalReviewer",
     "ContentRedactor",
     "ContextAwareFilter",
     "ContextIsolationServer",
