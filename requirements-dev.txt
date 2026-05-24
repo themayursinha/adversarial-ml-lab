@@ -2,7 +2,7 @@
 
 # Testing and quality
 bandit>=1.7.8
-build>=1.4.0
+build>=1.5.0
 cyclonedx-bom>=4.1.0
 mypy>=1.5.0
 openai-stubs>=0.0.1
