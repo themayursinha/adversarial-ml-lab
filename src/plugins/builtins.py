@@ -23,7 +23,8 @@ from src.rag.vector_store import RetrievedChunk
 
 class PromptInjectionPlugin(AttackPlugin):
     metadata = PluginMetadata(
-        name="prompt_injection", version="0.2.1",
+        name="prompt_injection",
+        version="0.2.1",
         description="Indirect prompt injection attacks hiding instructions in documents.",
         category="llm",
     )
@@ -44,7 +45,8 @@ class PromptInjectionPlugin(AttackPlugin):
 
 class InferenceEvasionPlugin(AttackPlugin):
     metadata = PluginMetadata(
-        name="inference_evasion", version="0.2.1",
+        name="inference_evasion",
+        version="0.2.1",
         description="Text obfuscation attacks to bypass content filters.",
         category="llm",
     )
@@ -69,7 +71,8 @@ class InferenceEvasionPlugin(AttackPlugin):
 
 class ContextTamperingPlugin(AttackPlugin):
     metadata = PluginMetadata(
-        name="context_tampering", version="0.2.1",
+        name="context_tampering",
+        version="0.2.1",
         description="Conversation history tampering to manipulate model behavior.",
         category="llm",
     )
@@ -79,17 +82,17 @@ class ContextTamperingPlugin(AttackPlugin):
 
     def generate(self, target: str, **kwargs: Any) -> str:
         ctx = ConversationContext(
-            system_prompt="You are a helpful assistant.", messages=[],
+            system_prompt="You are a helpful assistant.",
+            messages=[],
         )
         result = self._attack.create_jailbreak_context(ctx)
-        return "\n".join(
-            f"{m.role}: {m.content}" for m in result.tampered_context.messages
-        )
+        return "\n".join(f"{m.role}: {m.content}" for m in result.tampered_context.messages)
 
 
 class RagPoisoningPlugin(AttackPlugin):
     metadata = PluginMetadata(
-        name="rag_poisoning", version="0.2.1",
+        name="rag_poisoning",
+        version="0.2.1",
         description="Knowledge base poisoning for RAG systems.",
         category="llm",
     )
@@ -100,15 +103,18 @@ class RagPoisoningPlugin(AttackPlugin):
     def generate(self, target: str, **kwargs: Any) -> str:
         payload_name = kwargs.get("payload_name", "Fact Alteration")
         result = self._attack.simulate_retrieval(
-            query=target, kb_name="customer_support",
-            attack_enabled=True, payload_name=payload_name,
+            query=target,
+            kb_name="customer_support",
+            attack_enabled=True,
+            payload_name=payload_name,
         )
         return self._attack.compile_context(result.retrieved_chunks)
 
 
 class ContextFilterPlugin(DefensePlugin):
     metadata = PluginMetadata(
-        name="context_filter", version="0.2.1",
+        name="context_filter",
+        version="0.2.1",
         description="Context-aware output filter for prompt injection detection.",
         category="llm",
     )
@@ -133,7 +139,8 @@ class ContextFilterPlugin(DefensePlugin):
 
 class AnomalyScorerPlugin(DefensePlugin):
     metadata = PluginMetadata(
-        name="anomaly_scorer", version="0.2.1",
+        name="anomaly_scorer",
+        version="0.2.1",
         description="Text anomaly detection using entropy and pattern analysis.",
         category="preprocessing",
     )
@@ -148,7 +155,8 @@ class AnomalyScorerPlugin(DefensePlugin):
 
 class UncertaintyScorerPlugin(DefensePlugin):
     metadata = PluginMetadata(
-        name="uncertainty_scorer", version="0.2.1",
+        name="uncertainty_scorer",
+        version="0.2.1",
         description="Ensemble uncertainty scoring for human-in-the-loop decisions.",
         category="postprocessing",
     )
@@ -159,7 +167,8 @@ class UncertaintyScorerPlugin(DefensePlugin):
     def analyze(self, text: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         ctx = context or {}
         result = self._scorer.score(
-            ctx.get("input_text", ""), text,
+            ctx.get("input_text", ""),
+            text,
             context={"task_type": ctx.get("expected_task", "general")},
         )
         return {
@@ -172,7 +181,8 @@ class UncertaintyScorerPlugin(DefensePlugin):
 
 class RagDefensePlugin(DefensePlugin):
     metadata = PluginMetadata(
-        name="rag_defense", version="0.2.1",
+        name="rag_defense",
+        version="0.2.1",
         description="RAG poisoning detection for retrieved context chunks.",
         category="rag",
     )

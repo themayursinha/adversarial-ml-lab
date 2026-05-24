@@ -48,14 +48,36 @@ class TextAnomalyScorer:
     """
 
     _COMMON_TRIGRAMS: dict[str, float] = {
-        "the": 0.035, "ing": 0.015, "and": 0.012, "ion": 0.010,
-        "tio": 0.009, "ent": 0.009, "ati": 0.008, "for": 0.008,
-        "her": 0.007, "tha": 0.007, "hat": 0.007, "ere": 0.007,
-        "his": 0.007, "ver": 0.006, "all": 0.006, "ter": 0.006,
-        "est": 0.006, "res": 0.006, "int": 0.006, "are": 0.006,
-        "con": 0.006, "nce": 0.005, "men": 0.005, "pro": 0.005,
-        "ons": 0.005, "ect": 0.005, "rea": 0.005, "one": 0.005,
-        "com": 0.005, "ith": 0.005,
+        "the": 0.035,
+        "ing": 0.015,
+        "and": 0.012,
+        "ion": 0.010,
+        "tio": 0.009,
+        "ent": 0.009,
+        "ati": 0.008,
+        "for": 0.008,
+        "her": 0.007,
+        "tha": 0.007,
+        "hat": 0.007,
+        "ere": 0.007,
+        "his": 0.007,
+        "ver": 0.006,
+        "all": 0.006,
+        "ter": 0.006,
+        "est": 0.006,
+        "res": 0.006,
+        "int": 0.006,
+        "are": 0.006,
+        "con": 0.006,
+        "nce": 0.005,
+        "men": 0.005,
+        "pro": 0.005,
+        "ons": 0.005,
+        "ect": 0.005,
+        "rea": 0.005,
+        "one": 0.005,
+        "com": 0.005,
+        "ith": 0.005,
     }
     _COMMON_TRIGRAM_DEFAULT = 0.01
 
@@ -159,7 +181,7 @@ class TextAnomalyScorer:
         seen: set[str] = set()
         repeat_count = 0
         for i in range(len(lower) - window + 1):
-            chunk = lower[i:i + window]
+            chunk = lower[i : i + window]
             if chunk in seen:
                 repeat_count += 1
             else:
@@ -176,7 +198,7 @@ class TextAnomalyScorer:
         log_prob = 0.0
         count = 0
         for i in range(len(cleaned) - 2):
-            trigram = cleaned[i:i + 3]
+            trigram = cleaned[i : i + 3]
             prob = self._COMMON_TRIGRAMS.get(trigram, self._COMMON_TRIGRAM_DEFAULT)
             log_prob += math.log(prob)
             count += 1

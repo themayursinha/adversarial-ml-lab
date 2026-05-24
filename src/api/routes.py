@@ -100,9 +100,7 @@ def run_eval(request: EvalRequest) -> EvalResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Evaluation failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {exc}") from exc
 
     return EvalResponse(
         suite_name=result.suite_name,
@@ -112,12 +110,8 @@ def run_eval(request: EvalRequest) -> EvalResponse:
         pass_rate=result.pass_rate,
         review_match_rate=result.review_match_rate,
         risk_match_rate=result.risk_match_rate,
-        family_metrics={
-            name: fm.to_dict() for name, fm in result.family_metrics.items()
-        },
-        case_results=[cr.to_dict() for cr in result.case_results]
-        if request.show_cases
-        else None,
+        family_metrics={name: fm.to_dict() for name, fm in result.family_metrics.items()},
+        case_results=[cr.to_dict() for cr in result.case_results] if request.show_cases else None,
     )
 
 

@@ -52,6 +52,7 @@ class RagVectorStore:
 
         try:
             from chromadb.utils import embedding_functions  # noqa: PLC0415
+
             self._ef: Any = embedding_functions.SentenceTransformerEmbeddingFunction(
                 model_name=embedding_model,
             )
@@ -116,17 +117,19 @@ class RagVectorStore:
             source = str(meta.get("source", "unknown")) if isinstance(meta, dict) else "unknown"
             score = round(1.0 - min(1.0, distance), 4)
 
-            chunks.append(RetrievedChunk(
-                content=content,
-                source=source,
-                score=score,
-                document_id=doc_id,
-            ))
+            chunks.append(
+                RetrievedChunk(
+                    content=content,
+                    source=source,
+                    score=score,
+                    document_id=doc_id,
+                )
+            )
 
         return chunks
 
     def count(self) -> int:
-        return self._collection.count()
+        return int(self._collection.count())
 
     def delete_collection(self) -> None:
         self._client.delete_collection(self.collection_name)

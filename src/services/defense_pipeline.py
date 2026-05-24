@@ -53,9 +53,7 @@ class DefensePipeline:
         self.anomaly_scorer = anomaly_scorer or TextAnomalyScorer()
         self.rag_defense = rag_defense or RagPoisoningDefense()
 
-    def analyze_rag_context(
-        self, chunks: list[RetrievedChunk]
-    ) -> RagDefenseResult:
+    def analyze_rag_context(self, chunks: list[RetrievedChunk]) -> RagDefenseResult:
         """Analyze retrieved RAG chunks for poisoning and return filtered results."""
         return self.rag_defense.analyze(chunks)
 

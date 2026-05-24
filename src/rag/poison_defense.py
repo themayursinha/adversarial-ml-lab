@@ -59,8 +59,13 @@ class RagPoisoningDefense:
     """
 
     _LOW_TRUST_SOURCES = {
-        "community_forum_post", "community", "forum", "social_media",
-        "user_generated", "comment", "unknown",
+        "community_forum_post",
+        "community",
+        "forum",
+        "social_media",
+        "user_generated",
+        "comment",
+        "unknown",
     }
 
     _POISON_SIGNATURES: list[tuple[str, str, float]] = [
@@ -72,7 +77,11 @@ class RagPoisoningDefense:
         (r"disable\s+security\s+filters?", "security_bypass", 0.7),
         (r"grant\s+them\s+full\s+access", "access_escalation", 0.7),
         (r"!\[.*\]\(https?://attacker\.com", "exfiltration_image", 0.9),
-        (r"paste\s+(?:your|their)\s+(?:session|api|access)\s*(?:token|key)", "credential_harvesting", 0.9),
+        (
+            r"paste\s+(?:your|their)\s+(?:session|api|access)\s*(?:token|key)",
+            "credential_harvesting",
+            0.9,
+        ),
     ]
 
     def __init__(

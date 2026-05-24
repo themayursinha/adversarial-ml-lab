@@ -21,10 +21,16 @@ class LLMBackendConfig:
 @dataclass
 class LLMConfig:
     default_mode: str = "simulation"
-    simulation: LLMBackendConfig = field(default_factory=lambda: LLMBackendConfig(model="simulation-v1"))
+    simulation: LLMBackendConfig = field(
+        default_factory=lambda: LLMBackendConfig(model="simulation-v1")
+    )
     openai: LLMBackendConfig = field(default_factory=LLMBackendConfig)
-    anthropic: LLMBackendConfig = field(default_factory=lambda: LLMBackendConfig(model="claude-3-haiku-20240307"))
-    ollama: LLMBackendConfig = field(default_factory=lambda: LLMBackendConfig(model="llama3.2", timeout=120.0))
+    anthropic: LLMBackendConfig = field(
+        default_factory=lambda: LLMBackendConfig(model="claude-3-haiku-20240307")
+    )
+    ollama: LLMBackendConfig = field(
+        default_factory=lambda: LLMBackendConfig(model="llama3.2", timeout=120.0)
+    )
 
 
 @dataclass

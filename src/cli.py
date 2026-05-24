@@ -100,6 +100,7 @@ def run_scan_command(args: argparse.Namespace) -> int:
 
     if getattr(args, "track", False):
         from src.services.tracking import get_tracker
+
         get_tracker().log_scan(payload)
         get_tracker().finish()
 
@@ -115,12 +116,14 @@ def run_eval_command(args: argparse.Namespace) -> int:
     if getattr(args, "judge", False):
         if args.dataset:
             output = run_evaluation_with_judge(
-                dataset_path=Path(args.dataset), suite_name=args.suite,
+                dataset_path=Path(args.dataset),
+                suite_name=args.suite,
             )
         else:
             with default_evaluation_dataset() as dataset_path:
                 output = run_evaluation_with_judge(
-                    dataset_path=dataset_path, suite_name=args.suite,
+                    dataset_path=dataset_path,
+                    suite_name=args.suite,
                 )
     elif args.dataset:
         result = run_evaluation_suite(
@@ -138,6 +141,7 @@ def run_eval_command(args: argparse.Namespace) -> int:
 
     if getattr(args, "track", False):
         from src.services.tracking import get_tracker
+
         get_tracker().log_eval(output)
         get_tracker().finish()
 
@@ -316,14 +320,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     fuzz_parser = subparsers.add_parser("fuzz", help="Run automated red teaming fuzzer.")
     fuzz_parser.add_argument("--content", help="Text content to attack.")
-    fuzz_parser.add_argument(
-        "--file", help="Path to file containing content to attack."
-    )
+    fuzz_parser.add_argument("--file", help="Path to file containing content to attack.")
     fuzz_parser.add_argument(
         "--family",
         default="all",
         help="Attack families to test: all, prompt_injection, context_tampering, "
-             "inference_evasion, rag_poisoning (comma-separated).",
+        "inference_evasion, rag_poisoning (comma-separated).",
     )
     fuzz_parser.add_argument(
         "--task",
@@ -339,7 +341,7 @@ def build_parser() -> argparse.ArgumentParser:
     fuzz_parser.add_argument(
         "--target-url",
         help="Remote API endpoint to fuzz (e.g., http://localhost:7861). "
-             "If set, sends attacks to the endpoint instead of local pipeline.",
+        "If set, sends attacks to the endpoint instead of local pipeline.",
     )
     fuzz_parser.add_argument(
         "--json-logs",
@@ -377,7 +379,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     plugin_list = plugin_sub.add_parser("list", help="List registered plugins.")
     plugin_list.add_argument(
-        "--type", choices=["attacks", "defenses", "all"], default="all",
+        "--type",
+        choices=["attacks", "defenses", "all"],
+        default="all",
         help="Plugin type to list.",
     )
     plugin_list.set_defaults(func=run_plugin_list_command)
@@ -386,15 +390,15 @@ def build_parser() -> argparse.ArgumentParser:
         "image-attack", help="Run image adversarial attacks (requires torch)."
     )
     image_parser.add_argument(
-        "--attack", choices=["fgsm", "pgd", "cw", "all"], default="fgsm",
+        "--attack",
+        choices=["fgsm", "pgd", "cw", "all"],
+        default="fgsm",
         help="Attack method.",
     )
     image_parser.add_argument(
         "--epsilon", type=float, default=0.03, help="Epsilon for FGSM/PGD (default: 0.03)."
     )
-    image_parser.add_argument(
-        "--steps", type=int, default=10, help="PGD steps (default: 10)."
-    )
+    image_parser.add_argument("--steps", type=int, default=10, help="PGD steps (default: 10).")
     image_parser.set_defaults(func=run_image_attack_command)
 
     return parser
@@ -421,25 +425,37 @@ def run_image_attack_command(args: argparse.Namespace) -> int:
     image = create_random_image()
     label = 281  # tabby cat in ImageNet
 
-    attacks: list[tuple[str, FastGradientSignMethod | ProjectedGradientDescent | CarliniWagnerL2]] = []
+    attacks: list[
+        tuple[str, FastGradientSignMethod | ProjectedGradientDescent | CarliniWagnerL2]
+    ] = []
     results: list[dict] = []
 
     if args.attack in ("fgsm", "all"):
         attacks.append(("FGSM", FastGradientSignMethod(model, epsilon=args.epsilon)))
     if args.attack in ("pgd", "all"):
-        attacks.append(("PGD", ProjectedGradientDescent(
-            model, epsilon=args.epsilon, alpha=args.epsilon / 4, steps=args.steps,
-        )))
+        attacks.append(
+            (
+                "PGD",
+                ProjectedGradientDescent(
+                    model,
+                    epsilon=args.epsilon,
+                    alpha=args.epsilon / 4,
+                    steps=args.steps,
+                ),
+            )
+        )
     if args.attack in ("cw", "all"):
         attacks.append(("CW-L2", CarliniWagnerL2(model, max_iter=min(100, args.steps * 10))))
 
     for name, attack in attacks:
         result = attack.generate(image, label)  # type: ignore[arg-type]
         results.append(result.to_dict())
-        print(f"{name}: success={result.success} "
-              f"orig_pred={result.original_prediction} adv_pred={result.adversarial_prediction} "
-              f"orig_conf={result.original_confidence:.3f} adv_conf={result.adversarial_confidence:.3f} "
-              f"L2={result.l2_distance:.4f} Linf={result.linf_distance:.4f}")
+        print(
+            f"{name}: success={result.success} "
+            f"orig_pred={result.original_prediction} adv_pred={result.adversarial_prediction} "
+            f"orig_conf={result.original_confidence:.3f} adv_conf={result.adversarial_confidence:.3f} "
+            f"L2={result.l2_distance:.4f} Linf={result.linf_distance:.4f}"
+        )
 
     return 0
 
@@ -474,8 +490,7 @@ def run_rag_command(args: argparse.Namespace) -> int:
     output = result.to_dict()
     output["query"] = args.query
     output["retrieved_chunks"] = [
-        {"source": c.source, "score": c.score, "content": c.content[:100]}
-        for c in chunks
+        {"source": c.source, "score": c.score, "content": c.content[:100]} for c in chunks
     ]
 
     print(json.dumps(output, indent=2))
@@ -514,6 +529,7 @@ def run_fuzz_command(args: argparse.Namespace) -> int:
 
     if getattr(args, "track", False):
         from src.services.tracking import get_tracker
+
         get_tracker().log_fuzz(output)
         get_tracker().finish()
 
@@ -568,6 +584,7 @@ def run_plugin_list_command(args: argparse.Namespace) -> int:
     """List registered plugins."""
     from src.plugins.base import get_registry
     from src.plugins.builtins import register_all
+
     register_all()
     registry = get_registry()
 

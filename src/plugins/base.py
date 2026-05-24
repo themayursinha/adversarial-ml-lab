@@ -92,14 +92,16 @@ class PluginRegistry:
 
     def _discover_builtins(self) -> int:
         count = 0
-        for _, module_name, _ in pkgutil.iter_modules(
-            ["src/attacks", "src/defenses"]
-        ):
+        for _, module_name, _ in pkgutil.iter_modules(["src/attacks", "src/defenses"]):
             try:
                 mod = importlib.import_module(f"src.attacks.{module_name}")
                 for attr in dir(mod):
                     obj = getattr(mod, attr)
-                    if isinstance(obj, type) and issubclass(obj, AttackPlugin) and obj is not AttackPlugin:
+                    if (
+                        isinstance(obj, type)
+                        and issubclass(obj, AttackPlugin)
+                        and obj is not AttackPlugin
+                    ):
                         self.register_attack(obj)
                         count += 1
             except Exception:

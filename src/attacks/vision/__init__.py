@@ -83,7 +83,7 @@ class FastGradientSignMethod:
             original_confidence=orig_conf,
             adversarial_confidence=adv_conf,
             attack_name="FGSM",
-            l2_distance=float(np.sqrt(np.sum(pert ** 2))),
+            l2_distance=float(np.sqrt(np.sum(pert**2))),
             linf_distance=float(np.max(np.abs(pert))),
             success=adv_pred != orig_pred,
         )
@@ -93,7 +93,11 @@ class ProjectedGradientDescent:
     """PGD: iterative FGSM with random start (Madry et al. 2017)."""
 
     def __init__(
-        self, model: Any, epsilon: float = 0.03, alpha: float = 0.01, steps: int = 40,
+        self,
+        model: Any,
+        epsilon: float = 0.03,
+        alpha: float = 0.01,
+        steps: int = 40,
     ) -> None:
         self.model = model
         self.epsilon = epsilon
@@ -142,7 +146,7 @@ class ProjectedGradientDescent:
             original_confidence=orig_conf,
             adversarial_confidence=adv_conf,
             attack_name=f"PGD(e={self.epsilon})",
-            l2_distance=float(np.sqrt(np.sum(pert ** 2))),
+            l2_distance=float(np.sqrt(np.sum(pert**2))),
             linf_distance=float(np.max(np.abs(pert))),
             success=adv_pred != orig_pred,
         )
@@ -152,8 +156,12 @@ class CarliniWagnerL2:
     """CW-L2: minimal L2 perturbation attack (Carlini & Wagner 2016)."""
 
     def __init__(
-        self, model: Any, confidence: float = 0.0, max_iter: int = 1000,
-        lr: float = 0.01, binary_search_steps: int = 9,
+        self,
+        model: Any,
+        confidence: float = 0.0,
+        max_iter: int = 1000,
+        lr: float = 0.01,
+        binary_search_steps: int = 9,
     ) -> None:
         self.model = model
         self.confidence = confidence
@@ -174,16 +182,23 @@ class CarliniWagnerL2:
 
         if orig_pred != label:
             return AdversarialImage(
-                original=image, adversarial=image, perturbation=np.zeros_like(image),
-                original_prediction=orig_pred, adversarial_prediction=orig_pred,
-                original_confidence=orig_conf, adversarial_confidence=orig_conf,
-                attack_name="CW-L2", l2_distance=0.0, linf_distance=0.0, success=False,
+                original=image,
+                adversarial=image,
+                perturbation=np.zeros_like(image),
+                original_prediction=orig_pred,
+                adversarial_prediction=orig_pred,
+                original_confidence=orig_conf,
+                adversarial_confidence=orig_conf,
+                attack_name="CW-L2",
+                l2_distance=0.0,
+                linf_distance=0.0,
+                success=False,
             )
 
         best_adv = image.copy()
         best_l2 = float("inf")
         c_low = 1e-4
-        c_high = 1e+1
+        c_high = 1e1
 
         for _ in range(self.binary_search_steps):
             c = (c_low + c_high) / 2
@@ -230,11 +245,15 @@ class CarliniWagnerL2:
             adv_conf = float(adv_out[0, label].item())
 
         return AdversarialImage(
-            original=image, adversarial=adv_np, perturbation=pert,
-            original_prediction=orig_pred, adversarial_prediction=adv_pred_val,
-            original_confidence=orig_conf, adversarial_confidence=adv_conf,
+            original=image,
+            adversarial=adv_np,
+            perturbation=pert,
+            original_prediction=orig_pred,
+            adversarial_prediction=adv_pred_val,
+            original_confidence=orig_conf,
+            adversarial_confidence=adv_conf,
             attack_name=f"CW-L2(c={c:.4f})",
-            l2_distance=float(np.sqrt(np.sum(pert ** 2))),
+            l2_distance=float(np.sqrt(np.sum(pert**2))),
             linf_distance=float(np.max(np.abs(pert))),
             success=adv_pred_val != orig_pred,
         )

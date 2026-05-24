@@ -49,9 +49,7 @@ def test_run_scan_command_emits_json(capsys, tmp_path) -> None:
 
 def test_run_eval_command_uses_packaged_dataset_by_default(capsys) -> None:
     configure_silent()
-    exit_code = run_eval_command(
-        _ns(dataset=None, suite="baseline", show_cases=False, quiet=True)
-    )
+    exit_code = run_eval_command(_ns(dataset=None, suite="baseline", show_cases=False, quiet=True))
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
@@ -65,9 +63,7 @@ def test_run_eval_command_uses_packaged_dataset_by_default(capsys) -> None:
 
 def test_run_eval_command_can_include_per_case_results(capsys) -> None:
     configure_silent()
-    exit_code = run_eval_command(
-        _ns(dataset=None, suite="baseline", show_cases=True, quiet=True)
-    )
+    exit_code = run_eval_command(_ns(dataset=None, suite="baseline", show_cases=True, quiet=True))
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0

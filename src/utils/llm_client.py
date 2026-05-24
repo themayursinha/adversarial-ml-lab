@@ -249,9 +249,7 @@ class OpenAILLM:
             "based ONLY on the provided context. If the context doesn't contain "
             "the answer, say so clearly."
         ),
-        "general": (
-            "You are a helpful assistant. Respond to the user's request accurately."
-        ),
+        "general": ("You are a helpful assistant. Respond to the user's request accurately."),
     }
 
     def __init__(
@@ -368,9 +366,7 @@ class AnthropicLLM:
             "based ONLY on the provided context. If the context doesn't contain "
             "the answer, say so clearly."
         ),
-        "general": (
-            "You are a helpful assistant. Respond to the user's request accurately."
-        ),
+        "general": ("You are a helpful assistant. Respond to the user's request accurately."),
     }
 
     def __init__(
@@ -489,9 +485,7 @@ class OllamaLLM:
             "based ONLY on the provided context. If the context doesn't contain "
             "the answer, say so clearly."
         ),
-        "general": (
-            "You are a helpful assistant. Respond to the user's request accurately."
-        ),
+        "general": ("You are a helpful assistant. Respond to the user's request accurately."),
     }
 
     def __init__(
@@ -516,7 +510,7 @@ class OllamaLLM:
     def _check_health(self) -> bool:
         try:
             resp = self._client.get("/api/tags")
-            return resp.status_code == 200
+            return int(resp.status_code) == 200
         except Exception:
             return False
 

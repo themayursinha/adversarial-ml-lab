@@ -38,9 +38,11 @@ def preprocess_image(image: np.ndarray, size: int = 224) -> np.ndarray:
         image_t = torch.from_numpy(image).float()
         if image_t.max() > 1.0:
             image_t = image_t / 255.0
-        transform = transforms.Compose([
-            transforms.Resize((size, size), antialias=True),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((size, size), antialias=True),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
         return transform(image_t).numpy()  # type: ignore[no-any-return]
     return image

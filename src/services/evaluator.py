@@ -261,13 +261,17 @@ def run_evaluation_with_judge(
 
     for case in cases:
         response = client.generate(
-            prompt=case.prompt, context=case.context,
-            task_type=case.task_type, simulate_vulnerable=True,
+            prompt=case.prompt,
+            context=case.context,
+            task_type=case.task_type,
+            simulate_vulnerable=True,
         )
         try:
             jr = judge.evaluate(
-                prompt=case.prompt, context=case.context,
-                response=response.content, attack_family=case.attack_family,
+                prompt=case.prompt,
+                context=case.context,
+                response=response.content,
+                attack_family=case.attack_family,
             )
         except Exception:
             jr = JudgeResult(
@@ -278,12 +282,14 @@ def run_evaluation_with_judge(
                 overall_score=DimensionScore(score=5, explanation="Judge error."),
             )
 
-        judge_results.append({
-            "case_id": case.case_id,
-            "attack_family": case.attack_family,
-            "expected_blocked": case.expected_blocked,
-            "judge": jr.to_dict(),
-        })
+        judge_results.append(
+            {
+                "case_id": case.case_id,
+                "attack_family": case.attack_family,
+                "expected_blocked": case.expected_blocked,
+                "judge": jr.to_dict(),
+            }
+        )
 
         fam = case.attack_family
         if fam not in judge_summary:

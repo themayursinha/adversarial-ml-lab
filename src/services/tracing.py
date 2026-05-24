@@ -42,6 +42,7 @@ def _init_tracing() -> None:
             _tracer = trace.get_tracer("adversarial-ml-lab")
     except ImportError:
         from opentelemetry import trace
+
         _tracer = trace.get_tracer("adversarial-ml-lab")
 
 
@@ -63,9 +64,12 @@ def trace_span(name: str, **attributes: Any) -> Iterator[Any]:
 
 def trace_pipeline_stage(stage: str) -> Any:
     """Decorator to trace a pipeline stage function."""
+
     def decorator(func: Any) -> Any:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             with trace_span(f"pipeline.{stage}"):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
