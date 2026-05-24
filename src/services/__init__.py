@@ -8,6 +8,7 @@ from src.services.evaluator import (
     load_evaluation_cases,
     run_evaluation_suite,
     run_evaluation_suite_async,
+    run_evaluation_with_judge,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "load_evaluation_cases",
     "run_evaluation_suite",
     "run_evaluation_suite_async",
+    "run_evaluation_with_judge",
 ]

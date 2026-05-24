@@ -9,7 +9,12 @@ import time
 from pathlib import Path
 
 from src.config.loader import load_config
-from src.services import DefensePipeline, default_evaluation_dataset, run_evaluation_suite
+from src.services import (
+    DefensePipeline,
+    default_evaluation_dataset,
+    run_evaluation_suite,
+    run_evaluation_with_judge,
+)
 from src.utils.llm_client import LLMClient, LLMMode
 from src.utils.logging import configure_logging, configure_silent
 
@@ -106,19 +111,30 @@ def run_eval_command(args: argparse.Namespace) -> int:
     """Execute evaluation suite and emit summary metrics as JSON."""
     _setup_logging(args)
     _tracking_setup(args, f"eval-{args.suite}-{int(time.time())}", tags=["eval", args.suite])
-    if args.dataset:
+
+    if getattr(args, "judge", False):
+        if args.dataset:
+            output = run_evaluation_with_judge(
+                dataset_path=Path(args.dataset), suite_name=args.suite,
+            )
+        else:
+            with default_evaluation_dataset() as dataset_path:
+                output = run_evaluation_with_judge(
+                    dataset_path=dataset_path, suite_name=args.suite,
+                )
+    elif args.dataset:
         result = run_evaluation_suite(
             dataset_path=Path(args.dataset),
             suite_name=args.suite,
         )
+        output = result.to_dict(include_case_results=getattr(args, "show_cases", False))
     else:
         with default_evaluation_dataset() as dataset_path:
             result = run_evaluation_suite(
                 dataset_path=dataset_path,
                 suite_name=args.suite,
             )
-
-    output = result.to_dict(include_case_results=getattr(args, "show_cases", False))
+        output = result.to_dict(include_case_results=getattr(args, "show_cases", False))
 
     if getattr(args, "track", False):
         from src.services.tracking import get_tracker
@@ -212,6 +228,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--show-cases",
         action="store_true",
         help="Include per-case evaluation results in the JSON output.",
+    )
+    eval_parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Enable LLM-as-judge scoring (requires API key).",
     )
     eval_parser.add_argument(
         "--log-level",

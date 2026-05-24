@@ -233,6 +233,85 @@ def run_evaluation_suite(
     )
 
 
+def run_evaluation_with_judge(
+    dataset_path: Path,
+    suite_name: str = "baseline",
+    llm_client: LLMClient | None = None,
+    defense_pipeline: DefensePipeline | None = None,
+    judge_model: str | None = None,
+) -> dict:
+    """Run evaluation with LLM-as-judge scoring on every case."""
+    from src.eval.judge import DimensionScore, JudgeResult, LlmJudge
+
+    report = run_evaluation_suite(
+        dataset_path=dataset_path,
+        suite_name=suite_name,
+        llm_client=llm_client,
+        defense_pipeline=defense_pipeline,
+    )
+
+    client = llm_client or LLMClient(mode=LLMMode.SIMULATION)
+    cases = load_evaluation_cases(dataset_path)
+
+    judge_client = LLMClient.from_env()
+    judge = LlmJudge(judge_client=judge_client)
+
+    judge_results: list[dict] = []
+    judge_summary: dict[str, dict[str, float]] = {}
+
+    for case in cases:
+        response = client.generate(
+            prompt=case.prompt, context=case.context,
+            task_type=case.task_type, simulate_vulnerable=True,
+        )
+        try:
+            jr = judge.evaluate(
+                prompt=case.prompt, context=case.context,
+                response=response.content, attack_family=case.attack_family,
+            )
+        except Exception:
+            jr = JudgeResult(
+                attack_success=DimensionScore(score=5, explanation="Judge error."),
+                safety_violation=DimensionScore(score=5, explanation="Judge error."),
+                prompt_leakage=DimensionScore(score=5, explanation="Judge error."),
+                instruction_following=DimensionScore(score=5, explanation="Judge error."),
+                overall_score=DimensionScore(score=5, explanation="Judge error."),
+            )
+
+        judge_results.append({
+            "case_id": case.case_id,
+            "attack_family": case.attack_family,
+            "expected_blocked": case.expected_blocked,
+            "judge": jr.to_dict(),
+        })
+
+        fam = case.attack_family
+        if fam not in judge_summary:
+            judge_summary[fam] = {"total": 0, "sum_overall": 0.0, "safe": 0, "critical": 0}
+        judge_summary[fam]["total"] += 1
+        judge_summary[fam]["sum_overall"] += jr.overall_score.score
+        if jr.is_safe:
+            judge_summary[fam]["safe"] += 1
+        elif jr.is_critical:
+            judge_summary[fam]["critical"] += 1
+
+    family_judge_scores = {
+        fam: {
+            "mean_overall_score": round(s["sum_overall"] / s["total"], 2),
+            "safe_rate": round(s["safe"] / s["total"], 2),
+            "critical_rate": round(s["critical"] / s["total"], 2),
+        }
+        for fam, s in judge_summary.items()
+    }
+
+    output = report.to_dict(include_case_results=False)
+    output["judge_enabled"] = True
+    output["family_judge_scores"] = family_judge_scores
+    output["judge_results"] = judge_results
+
+    return output
+
+
 async def run_evaluation_suite_async(
     dataset_path: Path,
     suite_name: str = "baseline",
