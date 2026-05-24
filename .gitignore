@@ -66,3 +66,6 @@ logs/
 # Project planning (local only)
 .project-maturity-plan.md
 .project-*.md
+
+# Sigstore attestations
+*.sigstore.json

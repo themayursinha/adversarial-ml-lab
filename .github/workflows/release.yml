@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  packages: write
+  attestations: write
 
 jobs:
   build-and-release:
@@ -23,6 +26,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
+          pip install sigstore
 
       - name: Run quality gates
         run: |
@@ -35,9 +39,24 @@ jobs:
           python -m build --no-isolation
           python -m twine check dist/*
 
-      - name: Build hardened runtime image
+      - name: Sign artifacts with Sigstore
         run: |
-          docker build --pull --tag adml-release-smoke:${{ github.sha }} .
+          for artifact in dist/*.whl dist/*.tar.gz; do
+            [ -f "$artifact" ] && python -m sigstore sign --bundle "${artifact}.sigstore.json" "$artifact"
+          done
+
+      - name: Build and push Docker image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          IMAGE=ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          IMAGE_LATEST=ghcr.io/${{ github.repository }}:latest
+          docker buildx build \
+            --provenance=true \
+            --sbom=true \
+            --push \
+            --tag "$IMAGE" \
+            --tag "$IMAGE_LATEST" \
+            .
 
       - name: Smoke test CLI help in locked-down container
         run: |
@@ -50,7 +69,7 @@ jobs:
             --security-opt no-new-privileges \
             -e PYTHONDONTWRITEBYTECODE=1 \
             --entrypoint python \
-            adml-release-smoke:${{ github.sha }} \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
             -m src.cli --help
 
       - name: Smoke test scan command in locked-down container
@@ -64,7 +83,7 @@ jobs:
             --security-opt no-new-privileges \
             -e PYTHONDONTWRITEBYTECODE=1 \
             --entrypoint python \
-            adml-release-smoke:${{ github.sha }} \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
             -m src.cli scan --task summarize
 
       - name: Smoke test installed CLI in isolated venv
@@ -79,10 +98,16 @@ jobs:
         run: |
           cyclonedx-py requirements requirements.txt --output-file sbom.json --output-format json
 
+      - name: Sign SBOM
+        run: |
+          python -m sigstore sign --bundle sbom.json.sigstore.json sbom.json
+
       - name: Create release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631  # v2.2.2
         with:
           files: |
             dist/*
+            dist/*.sigstore.json
             sbom.json
+            sbom.json.sigstore.json
           generate_release_notes: true
