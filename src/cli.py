@@ -231,7 +231,70 @@ def build_parser() -> argparse.ArgumentParser:
     )
     api_parser.set_defaults(func=run_api_command)
 
+    fuzz_parser = subparsers.add_parser("fuzz", help="Run automated red teaming fuzzer.")
+    fuzz_parser.add_argument("--content", help="Text content to attack.")
+    fuzz_parser.add_argument(
+        "--file", help="Path to file containing content to attack."
+    )
+    fuzz_parser.add_argument(
+        "--family",
+        default="all",
+        help="Attack families to test: all, prompt_injection, context_tampering, "
+             "inference_evasion, rag_poisoning (comma-separated).",
+    )
+    fuzz_parser.add_argument(
+        "--task",
+        default="summarize",
+        choices=["general", "summarize", "classify", "chat", "qa"],
+        help="Task type for policy checks.",
+    )
+    fuzz_parser.add_argument(
+        "--mode",
+        choices=["simulation", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: auto-detect).",
+    )
+    fuzz_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    fuzz_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
+    )
+    fuzz_parser.set_defaults(func=run_fuzz_command)
+
     return parser
+
+
+def run_fuzz_command(args: argparse.Namespace) -> int:
+    """Run the red teaming fuzzer and emit findings as JSON."""
+    _setup_logging(args)
+    from src.attacks.fuzzer import RedTeamFuzzer
+
+    if args.file:
+        content = Path(args.file).read_text(encoding="utf-8", errors="ignore")
+    elif args.content:
+        content = args.content
+    else:
+        if sys.stdin.isatty():
+            raise ValueError("Provide --content, --file, or pipe input over stdin.")
+        content = sys.stdin.read()
+
+    families: list[str] | None = None
+    if args.family != "all":
+        families = [f.strip() for f in args.family.split(",")]
+
+    mode = _resolve_mode(args.mode)
+    client = LLMClient.from_env(mode=mode) if mode else LLMClient.from_env()
+
+    fuzzer = RedTeamFuzzer(llm_client=client)
+    report = fuzzer.fuzz(target=content, families=families, task_type=args.task)
+
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0
 
 
 def run_api_command(args: argparse.Namespace) -> int:
