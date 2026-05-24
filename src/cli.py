@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from src.config.loader import load_config
 from src.services import DefensePipeline, default_evaluation_dataset, run_evaluation_suite
 from src.utils.llm_client import LLMClient, LLMMode
 from src.utils.logging import configure_logging, configure_silent
@@ -122,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
         prog="adml",
         description="Adversarial ML Security Lab toolkit.",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to YAML config file (default: configs/config.yaml).",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     scan_parser = subparsers.add_parser("scan", help="Scan text using defense pipeline.")
@@ -206,6 +212,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emit JSON-formatted logs to stderr.",
     )
     serve_parser.set_defaults(func=run_serve_command)
+
+    config_parser = subparsers.add_parser("config", help="Show current configuration.")
+    config_parser.add_argument(
+        "--file",
+        default=None,
+        help="Path to YAML config file (default: configs/config.yaml).",
+    )
+    config_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    config_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
+    )
+    config_parser.set_defaults(func=run_config_command)
 
     api_parser = subparsers.add_parser("api", help="Run the FastAPI server.")
     api_parser.add_argument("--host", default="127.0.0.1", help="Host bind address.")
@@ -314,6 +339,17 @@ def run_api_command(args: argparse.Namespace) -> int:
         reload=args.reload,
         log_level=args.log_level.lower(),
     )
+    return 0
+
+
+def run_config_command(args: argparse.Namespace) -> int:
+    """Print current configuration as JSON."""
+    _setup_logging(args)
+    from omegaconf import OmegaConf
+
+    config_path = args.file or "configs/config.yaml"
+    cfg = load_config(config_path)
+    print(OmegaConf.to_yaml(OmegaConf.structured(cfg)))
     return 0
 
 
