@@ -372,6 +372,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rag_parser.set_defaults(func=run_rag_command)
 
+    plugin_parser = subparsers.add_parser("plugin", help="Manage attack and defense plugins.")
+    plugin_sub = plugin_parser.add_subparsers(dest="plugin_action", required=True)
+
+    plugin_list = plugin_sub.add_parser("list", help="List registered plugins.")
+    plugin_list.add_argument(
+        "--type", choices=["attacks", "defenses", "all"], default="all",
+        help="Plugin type to list.",
+    )
+    plugin_list.set_defaults(func=run_plugin_list_command)
+
     return parser
 
 
@@ -493,6 +503,24 @@ def main() -> int:
     except Exception as error:  # pragma: no cover - defensive CLI guard
         print(f"error: {error}", file=sys.stderr)
         return 2
+
+
+def run_plugin_list_command(args: argparse.Namespace) -> int:
+    """List registered plugins."""
+    from src.plugins.base import get_registry
+    from src.plugins.builtins import register_all
+    register_all()
+    registry = get_registry()
+
+    if args.type in ("attacks", "all"):
+        print("Attacks:")
+        for a in registry.list_attacks():
+            print(f"  {a['name']} [{a['category']}]")
+    if args.type in ("defenses", "all"):
+        print("Defenses:")
+        for d in registry.list_defenses():
+            print(f"  {d['name']} [{d['category']}]")
+    return 0
 
 
 if __name__ == "__main__":
