@@ -12,6 +12,6 @@ pytest-asyncio>=0.24.0
 pytest-cov>=4.1.0
 ruff>=0.1.0
 setuptools>=69
-twine>=5.1.1
+twine>=6.2.0
 types-structlog>=0.1.0
 wheel>=0.43.0
