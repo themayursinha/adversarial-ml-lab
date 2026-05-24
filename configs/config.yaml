@@ -42,6 +42,9 @@ defense:
     repetition_threshold: 0.3
     trigram_perplexity_threshold: 400.0
     anomaly_threshold: 0.6
+  rag_defense:
+    low_score_threshold: 0.3
+    block_threshold: 0.5
 
 uncertainty:
   human_review_threshold: 0.5

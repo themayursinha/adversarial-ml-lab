@@ -13,6 +13,8 @@ from src.domain.security_events import (
     MitigationOutcome,
     SecurityEvent,
 )
+from src.rag.poison_defense import RagDefenseResult, RagPoisoningDefense
+from src.rag.vector_store import RetrievedChunk
 from src.services.canonicalization import canonicalize_text
 
 
@@ -27,6 +29,7 @@ class PipelineResult:
     canonical_input: str
     canonical_output: str
     anomaly_score: dict | None = None
+    rag_result: dict | None = None
     events: list[SecurityEvent] = field(default_factory=list)
 
 
@@ -38,6 +41,7 @@ class DefensePipeline:
         context_filter: ContextAwareFilter | None = None,
         uncertainty_scorer: EnsembleUncertaintyScorer | None = None,
         anomaly_scorer: TextAnomalyScorer | None = None,
+        rag_defense: RagPoisoningDefense | None = None,
     ) -> None:
         self.context_filter = context_filter or ContextAwareFilter(
             sensitivity=0.7, block_on_detection=True
@@ -46,6 +50,13 @@ class DefensePipeline:
             human_review_threshold=0.5
         )
         self.anomaly_scorer = anomaly_scorer or TextAnomalyScorer()
+        self.rag_defense = rag_defense or RagPoisoningDefense()
+
+    def analyze_rag_context(
+        self, chunks: list[RetrievedChunk]
+    ) -> RagDefenseResult:
+        """Analyze retrieved RAG chunks for poisoning and return filtered results."""
+        return self.rag_defense.analyze(chunks)
 
     def analyze_output(
         self,

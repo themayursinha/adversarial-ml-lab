@@ -46,6 +46,13 @@ class DefenseConfig:
     context_filter: ContextFilterConfig = field(default_factory=ContextFilterConfig)
     isolation: IsolationConfig = field(default_factory=IsolationConfig)
     anomaly_scorer: AnomalyConfig = field(default_factory=lambda: AnomalyConfig())
+    rag_defense: RagDefenseConfig = field(default_factory=lambda: RagDefenseConfig())
+
+
+@dataclass
+class RagDefenseConfig:
+    low_score_threshold: float = 0.3
+    block_threshold: float = 0.5
 
 
 @dataclass

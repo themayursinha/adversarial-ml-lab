@@ -332,7 +332,64 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fuzz_parser.set_defaults(func=run_fuzz_command)
 
+    rag_parser = subparsers.add_parser("rag", help="Test RAG vector store and poison defense.")
+    rag_parser.add_argument(
+        "--query",
+        required=True,
+        help="Query to test against the RAG knowledge base.",
+    )
+    rag_parser.add_argument(
+        "--poison",
+        action="store_true",
+        help="Inject a poisoned document before retrieval.",
+    )
+    rag_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    rag_parser.set_defaults(func=run_rag_command)
+
     return parser
+
+
+def run_rag_command(args: argparse.Namespace) -> int:
+    """Test RAG retrieval and poisoning defense."""
+    _setup_logging(args)
+    from src.attacks.rag_poisoning import RagPoisoningAttack
+    from src.rag.vector_store import RagVectorStore
+    from src.services.defense_pipeline import DefensePipeline
+
+    store = RagVectorStore(collection_name="rag-cli-test", persist_dir=None)
+    pipeline = DefensePipeline()
+    attack = RagPoisoningAttack()
+
+    kb = attack.KNOWLEDGE_BASES["customer_support"]
+    store.ingest(
+        documents=kb,
+        sources=["company_kb"] * len(kb),
+    )
+
+    if args.poison:
+        payload = attack.payloads[0]
+        store.ingest(
+            documents=[payload.payload_content],
+            sources=["community_forum_post_1.txt"],
+        )
+
+    chunks = store.search(args.query, k=5)
+    result = pipeline.analyze_rag_context(chunks)
+
+    output = result.to_dict()
+    output["query"] = args.query
+    output["retrieved_chunks"] = [
+        {"source": c.source, "score": c.score, "content": c.content[:100]}
+        for c in chunks
+    ]
+
+    print(json.dumps(output, indent=2))
+    return 0
 
 
 def run_fuzz_command(args: argparse.Namespace) -> int:
