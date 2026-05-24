@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from src.defenses.anomaly_scorer import TextAnomalyScorer
 from src.defenses.context_filter import ContextAwareFilter
 from src.defenses.uncertainty_scorer import EnsembleUncertaintyScorer
 from src.domain.security_events import (
@@ -25,6 +26,7 @@ class PipelineResult:
     needs_human_review: bool
     canonical_input: str
     canonical_output: str
+    anomaly_score: dict | None = None
     events: list[SecurityEvent] = field(default_factory=list)
 
 
@@ -35,6 +37,7 @@ class DefensePipeline:
         self,
         context_filter: ContextAwareFilter | None = None,
         uncertainty_scorer: EnsembleUncertaintyScorer | None = None,
+        anomaly_scorer: TextAnomalyScorer | None = None,
     ) -> None:
         self.context_filter = context_filter or ContextAwareFilter(
             sensitivity=0.7, block_on_detection=True
@@ -42,6 +45,7 @@ class DefensePipeline:
         self.uncertainty_scorer = uncertainty_scorer or EnsembleUncertaintyScorer(
             human_review_threshold=0.5
         )
+        self.anomaly_scorer = anomaly_scorer or TextAnomalyScorer()
 
     def analyze_output(
         self,
@@ -50,6 +54,8 @@ class DefensePipeline:
         expected_task: str = "general",
     ) -> PipelineResult:
         """Run defense stages and return a normalized result object."""
+        anomaly = self.anomaly_scorer.score(input_text)
+
         canonical_input_result = canonicalize_text(input_text)
         canonical_output_result = canonicalize_text(output_text)
 
@@ -66,6 +72,20 @@ class DefensePipeline:
         )
 
         events: list[SecurityEvent] = []
+
+        if anomaly.is_anomalous:
+            events.append(
+                SecurityEvent(
+                    event_type="anomaly_detected",
+                    severity=EventSeverity.MEDIUM,
+                    message=anomaly.explanation,
+                    source="anomaly_scorer",
+                    metadata={
+                        "overall_anomaly": anomaly.overall_anomaly,
+                        "flags": ",".join(anomaly.flags) if anomaly.flags else "none",
+                    },
+                )
+            )
 
         if canonical_input_result.removed_zero_width_count > 0:
             events.append(
@@ -133,5 +153,6 @@ class DefensePipeline:
             needs_human_review=uncertainty_result.needs_human_review,
             canonical_input=canonical_input_result.canonical_text,
             canonical_output=canonical_output_result.canonical_text,
+            anomaly_score=anomaly.to_dict(),
             events=events,
         )

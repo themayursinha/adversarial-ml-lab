@@ -35,6 +35,13 @@ defense:
     redaction_level: basic
     max_session_age_minutes: 30
     max_context_length: 50
+  anomaly_scorer:
+    entropy_threshold: 4.2
+    symbol_density_threshold: 0.25
+    unicode_ratio_threshold: 0.15
+    repetition_threshold: 0.3
+    trigram_perplexity_threshold: 400.0
+    anomaly_threshold: 0.6
 
 uncertainty:
   human_review_threshold: 0.5

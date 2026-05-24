@@ -45,6 +45,17 @@ class IsolationConfig:
 class DefenseConfig:
     context_filter: ContextFilterConfig = field(default_factory=ContextFilterConfig)
     isolation: IsolationConfig = field(default_factory=IsolationConfig)
+    anomaly_scorer: AnomalyConfig = field(default_factory=lambda: AnomalyConfig())
+
+
+@dataclass
+class AnomalyConfig:
+    entropy_threshold: float = 4.2
+    symbol_density_threshold: float = 0.25
+    unicode_ratio_threshold: float = 0.15
+    repetition_threshold: float = 0.3
+    trigram_perplexity_threshold: float = 400.0
+    anomaly_threshold: float = 0.6
 
 
 @dataclass
