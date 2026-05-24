@@ -16,6 +16,7 @@ from src.domain.security_events import (
 from src.rag.poison_defense import RagDefenseResult, RagPoisoningDefense
 from src.rag.vector_store import RetrievedChunk
 from src.services.canonicalization import canonicalize_text
+from src.services.tracing import trace_span
 
 
 @dataclass
@@ -65,22 +66,26 @@ class DefensePipeline:
         expected_task: str = "general",
     ) -> PipelineResult:
         """Run defense stages and return a normalized result object."""
-        anomaly = self.anomaly_scorer.score(input_text)
+        with trace_span("pipeline.anomaly_scorer"):
+            anomaly = self.anomaly_scorer.score(input_text)
 
-        canonical_input_result = canonicalize_text(input_text)
-        canonical_output_result = canonicalize_text(output_text)
+        with trace_span("pipeline.canonicalization"):
+            canonical_input_result = canonicalize_text(input_text)
+            canonical_output_result = canonicalize_text(output_text)
 
-        filter_result = self.context_filter.filter_output(
-            canonical_output_result.canonical_text,
-            input_context=canonical_input_result.canonical_text,
-            expected_task=expected_task,
-        )
+        with trace_span("pipeline.context_filter"):
+            filter_result = self.context_filter.filter_output(
+                canonical_output_result.canonical_text,
+                input_context=canonical_input_result.canonical_text,
+                expected_task=expected_task,
+            )
 
-        uncertainty_result = self.uncertainty_scorer.score(
-            canonical_input_result.canonical_text,
-            filter_result.filtered_output,
-            context={"task_type": expected_task},
-        )
+        with trace_span("pipeline.uncertainty_scorer"):
+            uncertainty_result = self.uncertainty_scorer.score(
+                canonical_input_result.canonical_text,
+                filter_result.filtered_output,
+                context={"task_type": expected_task},
+            )
 
         events: list[SecurityEvent] = []
 
