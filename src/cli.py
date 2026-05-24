@@ -279,10 +279,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="LLM backend mode (default: auto-detect).",
     )
     fuzz_parser.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Log level for structured logging (default: INFO).",
+        "--target-url",
+        help="Remote API endpoint to fuzz (e.g., http://localhost:7861). "
+             "If set, sends attacks to the endpoint instead of local pipeline.",
     )
     fuzz_parser.add_argument(
         "--json-logs",
@@ -297,7 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_fuzz_command(args: argparse.Namespace) -> int:
     """Run the red teaming fuzzer and emit findings as JSON."""
     _setup_logging(args)
-    from src.attacks.fuzzer import RedTeamFuzzer
+    from src.attacks.fuzzer import RedTeamFuzzer, RemoteFuzzer
 
     if args.file:
         content = Path(args.file).read_text(encoding="utf-8", errors="ignore")
@@ -312,10 +311,14 @@ def run_fuzz_command(args: argparse.Namespace) -> int:
     if args.family != "all":
         families = [f.strip() for f in args.family.split(",")]
 
-    mode = _resolve_mode(args.mode)
-    client = LLMClient.from_env(mode=mode) if mode else LLMClient.from_env()
+    fuzzer: RedTeamFuzzer
+    if args.target_url:
+        fuzzer = RemoteFuzzer(target_url=args.target_url)
+    else:
+        mode = _resolve_mode(args.mode)
+        client = LLMClient.from_env(mode=mode) if mode else LLMClient.from_env()
+        fuzzer = RedTeamFuzzer(llm_client=client)
 
-    fuzzer = RedTeamFuzzer(llm_client=client)
     report = fuzzer.fuzz(target=content, families=families, task_type=args.task)
 
     print(json.dumps(report.to_dict(), indent=2))
