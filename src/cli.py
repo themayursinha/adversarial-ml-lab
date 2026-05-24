@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from src.config.loader import load_config
@@ -18,6 +19,22 @@ def _resolve_mode(mode_arg: str | None) -> LLMMode:
     if mode_arg:
         return LLMMode(mode_arg)
     return LLMMode.SIMULATION
+
+
+def _resolve_mode_or_none(mode_arg: str | None) -> LLMMode | None:
+    if mode_arg:
+        return LLMMode(mode_arg)
+    return None
+
+
+def _tracking_setup(args: argparse.Namespace, name: str, tags: list[str] | None = None) -> None:
+    """Start W&B tracking if --track flag is set."""
+    if not getattr(args, "track", False):
+        return
+    from src.services.tracking import get_tracker
+
+    tracker = get_tracker()
+    tracker.start(run_name=name, tags=tags)
 
 
 def _setup_logging(args: argparse.Namespace) -> None:
@@ -43,6 +60,7 @@ def _read_scan_input(file_path: str | None) -> str:
 def run_scan_command(args: argparse.Namespace) -> int:
     """Run scan mode on a file or piped text and emit JSON output."""
     _setup_logging(args)
+    _tracking_setup(args, f"scan-{int(time.time())}", tags=["scan", args.task or "summarize"])
     text = _read_scan_input(args.file)
     mode = _resolve_mode(args.mode)
     client = LLMClient.from_env(mode=mode)
@@ -75,6 +93,11 @@ def run_scan_command(args: argparse.Namespace) -> int:
         "events": [event.to_dict() for event in result.events],
     }
 
+    if getattr(args, "track", False):
+        from src.services.tracking import get_tracker
+        get_tracker().log_scan(payload)
+        get_tracker().finish()
+
     print(json.dumps(payload, indent=2))
     return 0
 
@@ -82,6 +105,7 @@ def run_scan_command(args: argparse.Namespace) -> int:
 def run_eval_command(args: argparse.Namespace) -> int:
     """Execute evaluation suite and emit summary metrics as JSON."""
     _setup_logging(args)
+    _tracking_setup(args, f"eval-{args.suite}-{int(time.time())}", tags=["eval", args.suite])
     if args.dataset:
         result = run_evaluation_suite(
             dataset_path=Path(args.dataset),
@@ -94,11 +118,14 @@ def run_eval_command(args: argparse.Namespace) -> int:
                 suite_name=args.suite,
             )
 
-    print(
-        json.dumps(
-            result.to_dict(include_case_results=getattr(args, "show_cases", False)), indent=2
-        )
-    )
+    output = result.to_dict(include_case_results=getattr(args, "show_cases", False))
+
+    if getattr(args, "track", False):
+        from src.services.tracking import get_tracker
+        get_tracker().log_eval(output)
+        get_tracker().finish()
+
+    print(json.dumps(output, indent=2))
     return 0
 
 
@@ -164,6 +191,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit JSON-formatted logs to stderr.",
     )
+    scan_parser.add_argument(
+        "--track",
+        action="store_true",
+        help="Log results to Weights & Biases (requires WANDB_API_KEY).",
+    )
     scan_parser.set_defaults(func=run_scan_command)
 
     eval_parser = subparsers.add_parser("eval", help="Run evaluation corpus and report metrics.")
@@ -191,6 +223,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--json-logs",
         action="store_true",
         help="Emit JSON-formatted logs to stderr.",
+    )
+    eval_parser.add_argument(
+        "--track",
+        action="store_true",
+        help="Log results to Weights & Biases (requires WANDB_API_KEY).",
     )
     eval_parser.set_defaults(func=run_eval_command)
 
@@ -288,6 +325,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit JSON-formatted logs to stderr.",
     )
+    fuzz_parser.add_argument(
+        "--track",
+        action="store_true",
+        help="Log results to Weights & Biases (requires WANDB_API_KEY).",
+    )
     fuzz_parser.set_defaults(func=run_fuzz_command)
 
     return parser
@@ -296,6 +338,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_fuzz_command(args: argparse.Namespace) -> int:
     """Run the red teaming fuzzer and emit findings as JSON."""
     _setup_logging(args)
+    _tracking_setup(args, f"fuzz-{int(time.time())}", tags=["fuzz", args.family or "all"])
     from src.attacks.fuzzer import RedTeamFuzzer, RemoteFuzzer
 
     if args.file:
@@ -320,8 +363,14 @@ def run_fuzz_command(args: argparse.Namespace) -> int:
         fuzzer = RedTeamFuzzer(llm_client=client)
 
     report = fuzzer.fuzz(target=content, families=families, task_type=args.task)
+    output = report.to_dict()
 
-    print(json.dumps(report.to_dict(), indent=2))
+    if getattr(args, "track", False):
+        from src.services.tracking import get_tracker
+        get_tracker().log_fuzz(output)
+        get_tracker().finish()
+
+    print(json.dumps(output, indent=2))
     return 0
 
 
