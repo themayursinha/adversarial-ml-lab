@@ -382,7 +382,66 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plugin_list.set_defaults(func=run_plugin_list_command)
 
+    image_parser = subparsers.add_parser(
+        "image-attack", help="Run image adversarial attacks (requires torch)."
+    )
+    image_parser.add_argument(
+        "--attack", choices=["fgsm", "pgd", "cw", "all"], default="fgsm",
+        help="Attack method.",
+    )
+    image_parser.add_argument(
+        "--epsilon", type=float, default=0.03, help="Epsilon for FGSM/PGD (default: 0.03)."
+    )
+    image_parser.add_argument(
+        "--steps", type=int, default=10, help="PGD steps (default: 10)."
+    )
+    image_parser.set_defaults(func=run_image_attack_command)
+
     return parser
+
+
+def run_image_attack_command(args: argparse.Namespace) -> int:
+    """Run image adversarial attack demonstrations."""
+    _setup_logging(args)
+
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        print("error: torch not installed. pip install torch torchvision", file=sys.stderr)
+        return 1
+
+    from src.attacks.vision import (
+        CarliniWagnerL2,
+        FastGradientSignMethod,
+        ProjectedGradientDescent,
+    )
+    from src.attacks.vision.utils import create_random_image, load_model
+
+    model = load_model("resnet18")
+    image = create_random_image()
+    label = 281  # tabby cat in ImageNet
+
+    attacks: list[tuple[str, FastGradientSignMethod | ProjectedGradientDescent | CarliniWagnerL2]] = []
+    results: list[dict] = []
+
+    if args.attack in ("fgsm", "all"):
+        attacks.append(("FGSM", FastGradientSignMethod(model, epsilon=args.epsilon)))
+    if args.attack in ("pgd", "all"):
+        attacks.append(("PGD", ProjectedGradientDescent(
+            model, epsilon=args.epsilon, alpha=args.epsilon / 4, steps=args.steps,
+        )))
+    if args.attack in ("cw", "all"):
+        attacks.append(("CW-L2", CarliniWagnerL2(model, max_iter=min(100, args.steps * 10))))
+
+    for name, attack in attacks:
+        result = attack.generate(image, label)  # type: ignore[arg-type]
+        results.append(result.to_dict())
+        print(f"{name}: success={result.success} "
+              f"orig_pred={result.original_prediction} adv_pred={result.adversarial_prediction} "
+              f"orig_conf={result.original_confidence:.3f} adv_conf={result.adversarial_confidence:.3f} "
+              f"L2={result.l2_distance:.4f} Linf={result.linf_distance:.4f}")
+
+    return 0
 
 
 def run_rag_command(args: argparse.Namespace) -> int:
