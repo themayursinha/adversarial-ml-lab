@@ -1,0 +1,26 @@
+name: Adversarial ML PR Scan
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run adversarial ML scan
+        uses: ./.github/actions/adml-scan
+        with:
+          task: "summarize"
+          fail-on-critical: "true"
+          max-files: "20"
