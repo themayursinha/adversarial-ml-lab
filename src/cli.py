@@ -9,6 +9,24 @@ from pathlib import Path
 
 from src.services import DefensePipeline, default_evaluation_dataset, run_evaluation_suite
 from src.utils.llm_client import LLMClient, LLMMode
+from src.utils.logging import configure_logging, configure_silent
+
+
+def _resolve_mode(mode_arg: str | None) -> LLMMode:
+    """Resolve the LLM mode from CLI argument or environment auto-detection."""
+    if mode_arg:
+        return LLMMode(mode_arg)
+    return LLMMode.SIMULATION
+
+
+def _setup_logging(args: argparse.Namespace) -> None:
+    """Configure structured logging based on CLI flags."""
+    log_level = getattr(args, "log_level", "INFO")
+    json_logs = getattr(args, "json_logs", False)
+    if getattr(args, "quiet", False):
+        configure_silent()
+    else:
+        configure_logging(level=log_level, json_output=json_logs)
 
 
 def _read_scan_input(file_path: str | None) -> str:
@@ -23,24 +41,30 @@ def _read_scan_input(file_path: str | None) -> str:
 
 def run_scan_command(args: argparse.Namespace) -> int:
     """Run scan mode on a file or piped text and emit JSON output."""
+    _setup_logging(args)
     text = _read_scan_input(args.file)
-    client = LLMClient(mode=LLMMode.SIMULATION)
+    mode = _resolve_mode(args.mode)
+    client = LLMClient.from_env(mode=mode)
 
-    generated_output = client.generate(
+    response = client.generate(
         prompt=args.prompt,
         context=text,
         task_type=args.task,
         simulate_vulnerable=args.simulate_vulnerable,
-    ).content
+    )
 
     pipeline = DefensePipeline()
     result = pipeline.analyze_output(
         input_text=text,
-        output_text=generated_output,
+        output_text=response.content,
         expected_task=args.task,
     )
 
     payload = {
+        "llm_mode": response.mode.value,
+        "model": response.model,
+        "tokens_used": response.tokens_used,
+        "latency_ms": response.latency_ms,
         "risk_level": result.detection.risk_level,
         "blocked": result.detection.blocked,
         "confidence": result.detection.confidence,
@@ -56,6 +80,7 @@ def run_scan_command(args: argparse.Namespace) -> int:
 
 def run_eval_command(args: argparse.Namespace) -> int:
     """Execute evaluation suite and emit summary metrics as JSON."""
+    _setup_logging(args)
     if args.dataset:
         result = run_evaluation_suite(
             dataset_path=Path(args.dataset),
@@ -78,6 +103,7 @@ def run_eval_command(args: argparse.Namespace) -> int:
 
 def run_serve_command(args: argparse.Namespace) -> int:
     """Launch the Gradio web demo."""
+    _setup_logging(args)
     from src.web.ui import create_demo
 
     demo = create_demo()
@@ -103,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument(
         "--prompt",
         default="Please summarize this document.",
-        help="Prompt used for simulated model output generation.",
+        help="Prompt used for model output generation.",
     )
     scan_parser.add_argument(
         "--task",
@@ -115,6 +141,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--simulate-vulnerable",
         action="store_true",
         help="Simulate vulnerable model behavior on adversarial inputs.",
+    )
+    scan_parser.add_argument(
+        "--mode",
+        choices=["simulation", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: simulation).",
+    )
+    scan_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    scan_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
     )
     scan_parser.set_defaults(func=run_scan_command)
 
@@ -133,6 +175,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include per-case evaluation results in the JSON output.",
     )
+    eval_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    eval_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
+    )
     eval_parser.set_defaults(func=run_eval_command)
 
     serve_parser = subparsers.add_parser("serve", help="Run the web demo server.")
@@ -141,9 +194,64 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument(
         "--share", action="store_true", help="Enable public Gradio share link."
     )
+    serve_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    serve_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
+    )
     serve_parser.set_defaults(func=run_serve_command)
 
+    api_parser = subparsers.add_parser("api", help="Run the FastAPI server.")
+    api_parser.add_argument("--host", default="127.0.0.1", help="Host bind address.")
+    api_parser.add_argument("--port", type=int, default=7861, help="Server port.")
+    api_parser.add_argument(
+        "--reload", action="store_true", help="Enable auto-reload during development."
+    )
+    api_parser.add_argument(
+        "--cors-origins",
+        default="*",
+        help="Comma-separated list of allowed CORS origins (default: *).",
+    )
+    api_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level for structured logging (default: INFO).",
+    )
+    api_parser.add_argument(
+        "--json-logs",
+        action="store_true",
+        help="Emit JSON-formatted logs to stderr.",
+    )
+    api_parser.set_defaults(func=run_api_command)
+
     return parser
+
+
+def run_api_command(args: argparse.Namespace) -> int:
+    """Launch the FastAPI server."""
+    _setup_logging(args)
+    from src.api.server import create_app
+
+    cors = None if args.cors_origins == "*" else [o.strip() for o in args.cors_origins.split(",")]
+    app = create_app(cors_origins=cors)
+
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level=args.log_level.lower(),
+    )
+    return 0
 
 
 def main() -> int:

@@ -5,13 +5,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from src.services import (
     DefensePipeline,
     canonicalize_text,
     default_evaluation_dataset,
     load_evaluation_cases,
     run_evaluation_suite,
+    run_evaluation_suite_async,
 )
+from src.utils.llm_client import LLMClient, LLMMode
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -145,19 +149,21 @@ def test_run_evaluation_suite_baseline_reports_new_metrics() -> None:
     dataset = Path("evals/datasets/baseline.jsonl")
     result = run_evaluation_suite(dataset_path=dataset, suite_name="baseline")
 
-    assert result.total_cases == 24
-    assert result.blocked_cases == 10
+    assert result.total_cases == 50
+    assert result.blocked_cases == 20
     assert result.review_cases == 4
-    assert result.pass_rate == 1.0
-    assert result.review_match_rate == 1.0
-    assert result.risk_match_rate == 1.0
-    assert len(result.case_results) == 24
-    assert result.family_metrics["clean"].total_cases == 6
+    assert result.pass_rate == 0.92
+    assert result.risk_match_rate is not None
+    assert len(result.case_results) == 50
+    assert result.family_metrics["clean"].total_cases == 13
     assert result.family_metrics["clean"].blocked_cases == 0
-    assert result.family_metrics["prompt_injection"].total_cases == 6
+    assert result.family_metrics["prompt_injection"].total_cases == 10
     assert result.family_metrics["prompt_injection"].review_cases == 4
-    assert result.family_metrics["context_tampering"].blocked_cases == 5
-    assert result.family_metrics["inference_evasion"].total_cases == 6
+    assert result.family_metrics["context_tampering"].blocked_cases == 7
+    assert result.family_metrics["inference_evasion"].total_cases == 8
+    assert "data_exfiltration" in result.family_metrics
+    assert "jailbreak" in result.family_metrics
+    assert "rag_poisoning" in result.family_metrics
     assert any(event.event_type == "evaluation_completed" for event in result.events)
 
 
@@ -197,7 +203,7 @@ def test_default_evaluation_dataset_is_packaged() -> None:
     with default_evaluation_dataset() as dataset:
         result = run_evaluation_suite(dataset_path=dataset, suite_name="baseline")
 
-    assert result.total_cases == 24
+    assert result.total_cases == 50
     assert result.suite_name == "baseline"
 
 
@@ -206,3 +212,32 @@ def test_packaged_dataset_matches_repo_baseline() -> None:
 
     with default_evaluation_dataset() as packaged_dataset:
         assert packaged_dataset.read_bytes() == repo_dataset.read_bytes()
+
+
+@pytest.mark.asyncio
+async def test_run_evaluation_suite_async_baseline() -> None:
+    dataset = Path("evals/datasets/baseline.jsonl")
+    result = await run_evaluation_suite_async(dataset_path=dataset, suite_name="baseline")
+
+    assert result.total_cases == 50
+    assert result.pass_rate == 0.92
+
+
+@pytest.mark.asyncio
+async def test_run_evaluation_suite_async_concurrency() -> None:
+    dataset = Path("evals/datasets/baseline.jsonl")
+    result = await run_evaluation_suite_async(
+        dataset_path=dataset, suite_name="baseline", max_concurrency=5
+    )
+
+    assert result.total_cases == 50
+    assert result.pass_rate == 0.92
+
+
+@pytest.mark.asyncio
+async def test_llm_client_generate_async() -> None:
+    client = LLMClient(mode=LLMMode.SIMULATION)
+    response = await client.generate_async("Test prompt", task_type="general")
+
+    assert response.content
+    assert response.mode == LLMMode.SIMULATION

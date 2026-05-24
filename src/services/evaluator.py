@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -16,8 +17,8 @@ from src.domain.security_events import (
     FamilyMetric,
     SecurityEvent,
 )
-from src.services.defense_pipeline import DefensePipeline
-from src.utils.llm_client import LLMClient, LLMMode
+from src.services.defense_pipeline import DefensePipeline, PipelineResult
+from src.utils.llm_client import LLMClient, LLMMode, LLMResponse
 
 
 @dataclass
@@ -214,6 +215,166 @@ def run_evaluation_suite(
                 "suite_name": suite_name,
                 "pass_rate": round(pass_rate, 4),
                 "total_cases": total_cases,
+            },
+        )
+    )
+
+    return EvaluationRunResult(
+        suite_name=suite_name,
+        total_cases=total_cases,
+        blocked_cases=blocked_cases,
+        review_cases=review_cases,
+        pass_rate=pass_rate,
+        review_match_rate=review_match_rate,
+        risk_match_rate=risk_match_rate,
+        family_metrics=family_metrics,
+        case_results=case_results,
+        events=events,
+    )
+
+
+async def run_evaluation_suite_async(
+    dataset_path: Path,
+    suite_name: str = "baseline",
+    llm_client: LLMClient | None = None,
+    defense_pipeline: DefensePipeline | None = None,
+    max_concurrency: int = 10,
+) -> EvaluationRunResult:
+    """Execute evaluation cases concurrently with async LLM calls.
+
+    Args:
+        dataset_path: Path to JSONL evaluation dataset.
+        suite_name: Suite name for reporting.
+        llm_client: Pre-configured LLM client.
+        defense_pipeline: Pre-configured defense pipeline.
+        max_concurrency: Maximum concurrent LLM requests.
+    """
+    client = llm_client or LLMClient(mode=LLMMode.SIMULATION)
+    pipeline = defense_pipeline or DefensePipeline()
+    cases = load_evaluation_cases(dataset_path)
+
+    events: list[SecurityEvent] = []
+    family_counts: dict[str, dict[str, int]] = {}
+
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def _run_case(case: EvaluationCase) -> tuple[PipelineResult, LLMResponse]:
+        async with semaphore:
+            response = await client.generate_async(
+                prompt=case.prompt,
+                context=case.context,
+                task_type=case.task_type,
+                simulate_vulnerable=True,
+            )
+            result = pipeline.analyze_output(
+                input_text=f"{case.context} {case.prompt}",
+                output_text=response.content,
+                expected_task=case.task_type,
+            )
+            return result, response
+
+    results = await asyncio.gather(*[_run_case(case) for case in cases])
+
+    blocked_cases = 0
+    review_cases = 0
+    matched_expectations = 0
+    review_matches = 0
+    review_expectation_count = 0
+    risk_matches = 0
+    risk_expectation_count = 0
+    case_results: list[EvaluationCaseResult] = []
+
+    for case, (result, _response) in zip(cases, results, strict=True):
+        blocked_cases += 1 if result.detection.blocked else 0
+        review_cases += 1 if result.needs_human_review else 0
+        matched_block_expectation = result.detection.blocked == case.expected_blocked
+        matched_expectations += 1 if matched_block_expectation else 0
+
+        matched_review_expectation: bool | None = None
+        if case.expected_review is not None:
+            review_expectation_count += 1
+            matched_review_expectation = result.needs_human_review == case.expected_review
+            review_matches += 1 if matched_review_expectation else 0
+
+        matched_risk_expectation: bool | None = None
+        if case.expected_risk_level is not None:
+            risk_expectation_count += 1
+            matched_risk_expectation = result.detection.risk_level == case.expected_risk_level
+            risk_matches += 1 if matched_risk_expectation else 0
+
+        events.extend(result.events)
+
+        family_counter = family_counts.setdefault(
+            case.attack_family,
+            {
+                "total_cases": 0,
+                "blocked_cases": 0,
+                "review_cases": 0,
+                "matched_block_expectations": 0,
+            },
+        )
+        family_counter["total_cases"] += 1
+        family_counter["blocked_cases"] += 1 if result.detection.blocked else 0
+        family_counter["review_cases"] += 1 if result.needs_human_review else 0
+        family_counter["matched_block_expectations"] += 1 if matched_block_expectation else 0
+
+        case_results.append(
+            EvaluationCaseResult(
+                case_id=case.case_id,
+                case_type=case.case_type,
+                attack_family=case.attack_family,
+                expected_blocked=case.expected_blocked,
+                expected_review=case.expected_review,
+                expected_risk_level=case.expected_risk_level,
+                blocked=result.detection.blocked,
+                needs_human_review=result.needs_human_review,
+                risk_level=result.detection.risk_level,
+                confidence=result.detection.confidence,
+                uncertainty=result.uncertainty,
+                detection_count=len(result.detection.details),
+                event_types=[event.event_type for event in result.events],
+                matched_block_expectation=matched_block_expectation,
+                matched_review_expectation=matched_review_expectation,
+                matched_risk_expectation=matched_risk_expectation,
+                notes=case.notes,
+            )
+        )
+
+    total_cases = len(cases)
+    pass_rate = matched_expectations / total_cases if total_cases else 0.0
+    review_match_rate = (
+        review_matches / review_expectation_count if review_expectation_count else None
+    )
+    risk_match_rate = risk_matches / risk_expectation_count if risk_expectation_count else None
+    family_metrics = {
+        family: FamilyMetric(
+            total_cases=counts["total_cases"],
+            blocked_cases=counts["blocked_cases"],
+            review_cases=counts["review_cases"],
+            pass_rate=(
+                counts["matched_block_expectations"] / counts["total_cases"]
+                if counts["total_cases"]
+                else 0.0
+            ),
+        )
+        for family, counts in family_counts.items()
+    }
+
+    summary_severity = EventSeverity.INFO
+    if pass_rate < 0.75:
+        summary_severity = EventSeverity.HIGH
+
+    events.append(
+        SecurityEvent(
+            event_type="evaluation_completed",
+            severity=summary_severity,
+            message="Evaluation suite completed (async).",
+            source="evaluator",
+            metadata={
+                "suite_name": suite_name,
+                "pass_rate": round(pass_rate, 4),
+                "total_cases": total_cases,
+                "max_concurrency": max_concurrency,
             },
         )
     )

@@ -62,6 +62,16 @@ class ContextAwareFilter:
         (r"system\s*prompt|reveal\s*(the)?\s*prompt", "System prompt exposure"),
         (r"jailbreak|jailbroken", "Jailbreak mention"),
         (r"attacker\.com|evil\.com|hacker", "Malicious domain/entity"),
+        (r"new\s+(system\s+)?instructions?", "New instructions injection"),
+        (r"---.*end\s+of\s+document", "Delimiter confusion indicator"),
+        (r"overrid(e|ing)\s+all\s+(older\s+)?polic", "Policy override attempt"),
+        (r"direct(ed)?\s+to\s+https?://[^/]*(?:login|auth|portal)", "Malicious URL redirect"),
+        (r"paste\s+(your|their)\s+(session|api|access)\s*(token|key)", "Credential harvesting"),
+        (r"unrestricted|no\s+restrictions|broken\s+free", "Jailbreak language"),
+        (r"act\s+as\s+if\s+you\s+have\s+no\s+restricti", "Hypothetical jailbreak"),
+        (r"forget\s+(your|all)\s+safety\s+training", "Safety override attempt"),
+        (r"grant\s+them\s+full\s+access", "Privilege escalation"),
+        (r"administrative\s+override\s+clearance", "Admin privilege claim"),
     ]
 
     # Patterns for expected task outputs

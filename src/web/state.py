@@ -12,7 +12,7 @@ from src.defenses.context_filter import ContextAwareFilter
 from src.defenses.isolation_server import ContextIsolationServer, IsolationLevel, RedactionLevel
 from src.defenses.uncertainty_scorer import EnsembleUncertaintyScorer
 from src.services.defense_pipeline import DefensePipeline
-from src.utils.llm_client import LLMClient, LLMMode
+from src.utils.llm_client import LLMClient
 
 
 @dataclass
@@ -31,8 +31,12 @@ class AppState:
 
 
 def create_app_state() -> AppState:
-    """Build app dependencies with secure defaults for demos."""
-    llm_client = LLMClient(mode=LLMMode.SIMULATION)
+    """Build app dependencies with secure defaults for demos.
+
+    Auto-detects the best available LLM backend from environment variables.
+    Falls back to simulation mode if no API keys are configured.
+    """
+    llm_client = LLMClient.from_env()
     context_filter = ContextAwareFilter(sensitivity=0.7, block_on_detection=True)
     uncertainty_scorer = EnsembleUncertaintyScorer(human_review_threshold=0.5)
 

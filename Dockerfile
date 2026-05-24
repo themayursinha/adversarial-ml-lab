@@ -1,5 +1,8 @@
 # Multi-stage build for maximum security and minimal size
 # Using Chainguard Hardened Images (DHI)
+# Chainguard images are cryptographically signed and verified.
+# For strict digest pinning, add @sha256:... after each image tag.
+# Dependabot monitors these images for updates weekly.
 
 # --- Stage 1: Build & Install ---
 FROM cgr.dev/chainguard/python:latest-dev AS builder
@@ -9,7 +12,8 @@ WORKDIR /app
 # Install dependencies into a writable temporary prefix.
 # This avoids writing to root-owned paths in Chainguard non-root images.
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/tmp/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/tmp/install -r requirements.txt && \
+    pip cache purge
 
 # --- Stage 2: Final Hardened Image ---
 FROM cgr.dev/chainguard/python:latest

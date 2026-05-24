@@ -7,6 +7,7 @@ from src.services.evaluator import (
     default_evaluation_dataset,
     load_evaluation_cases,
     run_evaluation_suite,
+    run_evaluation_suite_async,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "default_evaluation_dataset",
     "load_evaluation_cases",
     "run_evaluation_suite",
+    "run_evaluation_suite_async",
 ]
