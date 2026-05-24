@@ -42,3 +42,21 @@ release-check: lint typecheck test security package
 
 run:
 	$(PYTHON) app.py
+
+up:
+	docker compose up -d api
+
+up-full:
+	docker compose --profile full up -d
+
+up-rag:
+	docker compose --profile rag up -d api chromadb
+
+up-llm:
+	docker compose --profile llm up -d api ollama
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f

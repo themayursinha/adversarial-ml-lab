@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    image: adversarial-ml-lab:latest
+    container_name: adml-api
+    ports:
+      - "7861:7861"
+    environment:
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7861
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    command: ["python", "-m", "src.cli", "api", "--host", "0.0.0.0", "--port", "7861"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7861/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/nonroot/.cache
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - adml-net
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: adml-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - adml-net
+    profiles:
+      - rag
+      - full
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: adml-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - adml-net
+    profiles:
+      - llm
+      - full
+
+volumes:
+  chroma-data:
+  ollama-data:
+
+networks:
+  adml-net:
+    driver: bridge
