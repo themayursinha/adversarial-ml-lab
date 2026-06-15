@@ -1075,9 +1075,9 @@ pillow==12.2.0 \
     # via
     #   gradio
     #   matplotlib
-plotly==6.7.0 \
-    --hash=sha256:45eea0ff27e2a23ccd62776f77eb43aa1ca03df4192b76036e380bb479b892c6 \
-    --hash=sha256:ac8aca1c25c663a59b5b9140a549264a5badde2e057d79b8c772ae2920e32ff0
+plotly==6.8.0 \
+    --hash=sha256:13c5c4a0f70b74cab1913eda0de49b826df5931708eb6f9c3010040614700ec8 \
+    --hash=sha256:e088e7ddc68d4f70e3d66659224727a45296d71d2b8284181862d3d8f1f0d88f
     # via -r requirements.txt
 pydantic==2.13.4 \
     --hash=sha256:45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba \
