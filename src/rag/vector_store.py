@@ -37,12 +37,12 @@ class RetrievedChunk:
 
 
 def _cosine_similarity(query: np.ndarray, matrix: np.ndarray) -> np.ndarray:
-    query_norm = np.linalg.norm(query)
+    query_norm = float(np.linalg.norm(query))
     if query_norm == 0:
-        return np.zeros(matrix.shape[0])
+        return np.zeros(matrix.shape[0], dtype=np.float64)
     matrix_norms = np.linalg.norm(matrix, axis=1)
     matrix_norms = np.where(matrix_norms == 0, 1.0, matrix_norms)
-    return (matrix @ query) / (matrix_norms * query_norm)
+    return np.asarray((matrix @ query) / (matrix_norms * query_norm), dtype=np.float64)
 
 
 class RagVectorStore:
