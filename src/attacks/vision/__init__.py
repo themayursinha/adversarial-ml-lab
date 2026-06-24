@@ -59,6 +59,8 @@ class FastGradientSignMethod:
             loss = torch.nn.functional.cross_entropy(output, torch.tensor([label]))
             loss.backward()
 
+        if x.grad is None:
+            raise RuntimeError("FGSM attack failed: input gradient was not computed")
         grad_sign = x.grad.sign()
         adv = x + self.epsilon * grad_sign
         adv = torch.clamp(adv, 0, 1)
@@ -122,6 +124,8 @@ class ProjectedGradientDescent:
                 loss.backward()
 
             with torch.no_grad():
+                if x_adv.grad is None:
+                    raise RuntimeError("PGD attack failed: input gradient was not computed")
                 x_adv = x_adv + self.alpha * x_adv.grad.sign()
                 eta = torch.clamp(x_adv - original, -self.epsilon, self.epsilon)
                 x_adv = torch.clamp(original + eta, 0, 1)
