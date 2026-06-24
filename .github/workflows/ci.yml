@@ -126,7 +126,7 @@ jobs:
 
       - name: Dependency audit
         run: |
-          python -m pip_audit -r requirements.txt --ignore-vuln CVE-2026-45829
+          python -m pip_audit -r requirements.txt
 
   sbom:
     runs-on: ubuntu-24.04

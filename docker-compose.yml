@@ -35,23 +35,6 @@ services:
     networks:
       - adml-net
 
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: adml-chromadb
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma-data:/chroma/chroma
-    environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=FALSE
-    restart: unless-stopped
-    networks:
-      - adml-net
-    profiles:
-      - rag
-      - full
-
   ollama:
     image: ollama/ollama:latest
     container_name: adml-ollama
@@ -77,7 +60,6 @@ services:
       - full
 
 volumes:
-  chroma-data:
   ollama-data:
 
 networks:

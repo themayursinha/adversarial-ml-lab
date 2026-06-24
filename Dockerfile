@@ -5,7 +5,7 @@
 # Dependabot monitors these images for updates weekly.
 
 # --- Stage 1: Build & Install ---
-FROM cgr.dev/chainguard/python:latest-dev AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:97ae4a8cba64560dc2279a5baa686409a2ca13e98d0fc21e24f7ec2f23deaff8 AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir --prefix=/tmp/install --require-hashes -r require
     pip cache purge
 
 # --- Stage 2: Final Hardened Image ---
-FROM cgr.dev/chainguard/python:latest
+FROM cgr.dev/chainguard/python:latest@sha256:3b1c6334c5a216c52b4059f148fa5edbb0cacadd3e576eb0f2fc2a75bbbc2841
 
 WORKDIR /app
 
