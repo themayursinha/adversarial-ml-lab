@@ -12,7 +12,7 @@ WORKDIR /app
 # Install dependencies into a writable temporary prefix.
 # This avoids writing to root-owned paths in Chainguard non-root images.
 COPY requirements-hashed.txt .
-RUN pip install --no-cache-dir --prefix=/tmp/install -r requirements-hashed.txt && \
+RUN pip install --no-cache-dir --prefix=/tmp/install --require-hashes -r requirements-hashed.txt && \
     pip cache purge
 
 # --- Stage 2: Final Hardened Image ---
