@@ -41,9 +41,7 @@ def _init_tracing() -> None:
         else:
             _tracer = trace.get_tracer("adversarial-ml-lab")
     except ImportError:
-        from opentelemetry import trace
-
-        _tracer = trace.get_tracer("adversarial-ml-lab")
+        log.warning("tracing.disabled", reason="opentelemetry_not_installed")
 
 
 def get_tracer() -> Any:
@@ -56,8 +54,11 @@ def get_tracer() -> Any:
 @contextmanager
 def trace_span(name: str, **attributes: Any) -> Iterator[Any]:
     tracer = get_tracer()
+    if tracer is None:
+        yield None
+        return
     with tracer.start_as_current_span(name) as span:
-        if attributes:
+        if attributes and span is not None:
             span.set_attributes(attributes)
         yield span
 
