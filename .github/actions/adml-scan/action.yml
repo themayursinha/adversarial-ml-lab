@@ -41,8 +41,8 @@ runs:
       shell: bash
       run: |
         FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} \
-          -- '*.md' '*.txt' '*.py' '*.json' '*.yaml' '*.yml' \
-          | grep -v 'test_' | grep -v '__pycache__' | head -n ${{ inputs.max-files }})
+          -- '*.md' '*.txt' '*.py' '*.json' '*.yaml' '*.yml' 'Dockerfile' 'Dockerfile.*' \
+          | grep -v 'test_' | grep -v '__pycache__' | head -n ${{ inputs.max-files }} || true)
         echo "count=$(echo "$FILES" | wc -l)" >> $GITHUB_OUTPUT
         echo "files<<EOF" >> $GITHUB_OUTPUT
         echo "$FILES" >> $GITHUB_OUTPUT
