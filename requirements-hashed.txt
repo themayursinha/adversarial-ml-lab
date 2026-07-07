@@ -554,9 +554,9 @@ huggingface-hub==1.18.0 \
     #   sentence-transformers
     #   tokenizers
     #   transformers
-hydra-core==1.3.3 \
-    --hash=sha256:b7477ee21f08b62f71bf0126d44695c048dc7e9c0cc79e2d593b707cb1e44048 \
-    --hash=sha256:cf349fc393f486f250e5825592c3d0a50c0af3effd726cf8dd5b637a7cb464e3
+hydra-core==1.3.4 \
+    --hash=sha256:ad0f7b05a0242255a8984d5a4ed2f6847f7b783ed727368a2c0155ec52d6c34c \
+    --hash=sha256:e58683692904a09f1fdfffa1a9b86bfd94e215b59f1ee17e7cd7d92738090d33
     # via -r requirements.txt
 idna==3.16 \
     --hash=sha256:cc246e3a3f89580c3a951b5ad298ca4638078b2cdd4f115654332b5c26daded5 \
