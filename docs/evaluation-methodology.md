@@ -28,6 +28,16 @@ Use `--show-cases` to include per-case results in the JSON output.
 adml eval --suite baseline --show-cases
 ```
 
+## Optional LLM-as-judge mode
+
+Heuristic eval (`run_evaluation_suite`) is the default and stays deterministic in simulation mode.
+
+For semantic scoring (0–10 dimensions via a judge LLM), pass `--judge` on the CLI. This uses `run_evaluation_with_judge` and `src/eval/judge.py` and requires a configured live backend unless the judge client is left in simulation (educational use only).
+
+```bash
+adml eval --suite baseline --judge
+```
+
 ## Core Metrics
 
 - `pass_rate`: percent of cases where observed blocked/not-blocked matches expectation.

@@ -6,7 +6,7 @@ Security-focused adversarial LLM lab for engineers who want to demonstrate, test
 
 This project is a polished public `0.2.x` release line intended for sharing, demos, and reproducible security experiments.
 
-- Simulation-first: no live model API integration is required or enabled by default.
+- Simulation-first: `LLMClient()` defaults to simulation; CLI/API call `LLMClient.from_env()` and only use live backends when you set API keys or `OLLAMA_HOST` (or pass explicit `--mode`).
 - Public surface: web demo, CLI workflows, baseline evaluation suite, and supporting security docs.
 - Not a production gateway: this repo demonstrates controls and failure modes; it is not a hosted policy engine or a hardened multi-tenant service.
 
@@ -66,7 +66,7 @@ venv/bin/python -m pip install ".[tracking]"
 
 ## What It Does Not Do
 
-- It does not ship a real OpenAI-backed runtime. The codebase is intentionally simulation-first.
+- It does not ship a hosted inference plane. The codebase defaults to simulation when no live-backend env vars are configured; optional OpenAI/Anthropic/Ollama paths are operator-enabled.
 - It does not claim production-grade sandboxing, tenant isolation, or SOC-ready telemetry pipelines.
 - It does not attempt broad benchmark coverage; the included dataset is a small, deterministic baseline suite.
 
@@ -75,6 +75,7 @@ venv/bin/python -m pip install ".[tracking]"
 - [Architecture](docs/architecture.md)
 - [Threat Model](docs/threat-model.md)
 - [Control Mapping](docs/control-mapping.md)
+- [Claim-to-Code Map](docs/claim-map.md)
 - [Evaluation Methodology](docs/evaluation-methodology.md)
 - [Deployment Hardening](docs/deployment-hardening.md)
 - [Project Status](docs/roadmap.md)

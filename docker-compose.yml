@@ -13,10 +13,11 @@ services:
       - PYTHONUNBUFFERED=1
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
       - WANDB_API_KEY=${WANDB_API_KEY:-}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-    command: ["python", "-m", "src.cli", "api", "--host", "0.0.0.0", "--port", "7861"]
+    entrypoint: ["python", "-m", "src.cli"]
+    command: ["api", "--host", "0.0.0.0", "--port", "7861"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7861/health')"]
       interval: 30s

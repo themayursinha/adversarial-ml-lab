@@ -1,7 +1,7 @@
 PYTHON ?= venv/bin/python
 PIP ?= $(PYTHON) -m pip
 
-.PHONY: setup setup-dev lint typecheck test security eval package release-check run
+.PHONY: setup setup-dev lint typecheck test security eval package release-check run up up-full up-llm down logs
 
 setup:
 	$(PIP) install --upgrade pip
@@ -48,9 +48,6 @@ up:
 
 up-full:
 	docker compose --profile full up -d
-
-up-rag:
-	docker compose --profile rag up -d api chromadb
 
 up-llm:
 	docker compose --profile llm up -d api ollama

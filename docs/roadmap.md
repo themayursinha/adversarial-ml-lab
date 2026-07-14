@@ -7,41 +7,50 @@ The current release line is intended to be publicly shareable and reproducible f
 Completed in this line:
 
 - Modular web stack in `src/web`
-- Service-layer defense pipeline and canonicalization flow
-- CLI workflows for `scan`, `eval`, and `serve`
-- Packaged baseline evaluation dataset for installed CLI use
-- RAG poisoning simulation and defense laboratory
-- Governance, release, and supply-chain documentation
+- Service-layer defense pipeline (anomaly → canonicalization → filter → uncertainty) and RAG defense hook
+- CLI workflows: `scan`, `eval`, `serve`, `api`, `fuzz`, `rag`, `plugin`, `config`, optional `image-attack`
+- Packaged baseline evaluation dataset (50 cases) for installed CLI and API smoke tests
+- RAG poisoning simulation and defense laboratory (in-memory vector store; `[rag]` extra for embeddings)
+- Optional FastAPI surface and compose `api` service (operator-enabled, not default Gradio container)
+- Automated red-team `fuzz` command over attack families
+- Heuristic `TextAnomalyScorer` and optional `ConstitutionalReviewer` module (reviewer not wired into default pipeline)
+- Optional LLM backends (simulation default; OpenAI/Anthropic/Ollama when configured)
+- Optional `adml eval --judge` LLM-as-judge path (`src/eval/judge.py`)
+- Governance, release, and supply-chain documentation with [claim-to-code map](claim-map.md)
 
 ## Stable Public Surface for This Release
 
 - Web demo launched through `app.py`
-- CLI entrypoints exposed through `src.cli`
+- CLI entrypoints exposed through `adml` / `src.cli`
 - Baseline evaluation workflow and dataset schema
 - RAG poisoning demonstration tab in Web UI
 - Structured security event outputs from the service layer
 
 ## Future Work
 
-These are possible future extensions, not release commitments:
+Possible extensions — **not** release commitments:
 
 ### Core Lab & Telemetry
+
 - Expand the eval corpus with labeled false-positive and false-negative cases
 - Add policy packs for more agentic workflow scenarios
-- Add structured telemetry export sinks
-- Add release provenance and signature attestations beyond the current SBOM flow
+- Add structured telemetry export sinks beyond optional W&B (`[tracking]` extra)
+- Wire `ConstitutionalReviewer` into an opt-in pipeline stage with tests
+- Add release provenance attestations beyond the current SBOM + sigstore bundle on release
 
 ### Advanced Attack Vectors
-- **Multi-Turn Jailbreaks**: Simulate conditioning an LLM over several messages to bypass alignment filters over time.
-- **Data Exfiltration Architectures**: Showcase how hijacked models securely exfiltrate data (e.g., Markdown image rendering exfiltration).
-- **"Many-Shot" Evasion**: Demonstrate context-window stuffing with hundreds of fake benign Q&A pairs.
+
+- **Multi-Turn Jailbreaks**: deeper multi-message conditioning scenarios in the eval corpus
+- **Data Exfiltration Architectures**: Markdown/image exfiltration demos
+- **"Many-Shot" Evasion**: large fake benign Q&A context stuffing scenarios
 
 ### Enhanced Defense Mechanisms
-- **Constitutional / Self-Correction Loop**: Implement an asynchronous reviewer/Judge LLM to evaluate the primary model's output before surfacing it.
-- **Perplexity & Entropy Scoring**: Add a scanner to filter highly anomalous payloads (like heavy Leetspeak or Zalgo text) before they reach the model.
-- **LLM-as-a-Judge Evaluation**: Upgrade the `eval` suite to use an LLM API to score mitigation success rather than relying solely on heuristics.
+
+- Stronger model-based perplexity filters (current `TextAnomalyScorer` is heuristic trigram/entropy analysis)
+- Broader LLM-as-judge coverage in CI (today optional and network-dependent)
 
 ### Real-World Integration & Infrastructure
-- **Live Model Backend (Optional)**: Add an optional backend to plug into local inferencing engines (e.g., `Ollama`, `vLLM`) to test attacks against real models.
-- **GitHub Action / CI Scanner**: Build an automated runner for `adml scan` to act as an automated PR reviewer for prompt injections and risky system prompts.
-- **Red Teaming Auto-Fuzzer**: Add an `adml fuzz` command to automatically iterate through evasion and injection techniques against target endpoints.
+
+- **GitHub Action / CI Scanner:** repo-local composite action `.github/actions/adml-scan` is used by `adml-pr-scan.yml`; **gap:** versioned marketplace packaging and external consumer hardening remain future work.
+- RAG: use `adml rag` with the `[rag]` extra locally (no dedicated compose RAG stack; removed misleading `make up-rag`).
+- Deeper NeMo Guardrails integration tests for `NemoguardrailsAction`
