@@ -1,6 +1,6 @@
 # Evaluation Contract
 
-The evaluation contract is a **frozen, versioned, fail-closed** specification that governs every dataset and run result in the adversarial-ml-lab evaluation framework. It guarantees that any two evaluation runs using the same contract version produce comparable, reproducible results.
+The evaluation contract is a **frozen, versioned, fail-closed** specification for governed datasets and run provenance in the adversarial-ml-lab evaluation framework. Deterministic simulation runs are comparable when their dataset digest, package version, default-config fingerprint, and metric definitions match.
 
 This document is the user-facing guide. For the raw JSON Schema files, see `src/resources/schemas/README.md`.
 
@@ -28,7 +28,7 @@ Without a contract, two things go wrong:
 - **Silent drift.** A dataset gains a new field, a row is reordered, a digest changes — but the evaluation results still "work" and nobody notices the shift.
 - **Uncomparable results.** Two runs claim the same pass rate, but one used a different dataset version or a different LLM mode.
 
-The evaluation contract prevents both. Every dataset ships a `.manifest.json` that freezes its identity, content integrity, row ordering, and structural constraints. Every run result ships a `provenance` block that captures the full execution context. If anything diverges, the contract **fails closed** — the load or run is rejected with a clear error.
+The evaluation contract prevents both for the packaged baseline and custom datasets with a sibling `.manifest.json`. Their manifests freeze identity, content integrity, row ordering, and structural constraints. Custom datasets without a manifest remain supported in legacy mode with row-schema and unique-ID validation only. Every run result ships a `provenance` block; contract violations fail closed with a clear error.
 
 ---
 
@@ -156,13 +156,13 @@ Each line is a JSON object conforming to `evaluation_case.v1.json`. Lines must b
 
 ### Step 2: Compute the manifest
 
-Use the bundled manifest generator:
+For the committed baseline only, regenerate both manifest copies with the bundled maintenance script:
 
 ```bash
-python scripts/generate_baseline_manifest.py --dataset evals/datasets/my-suite.jsonl
+python scripts/generate_baseline_manifest.py
 ```
 
-Or compute the digest manually:
+For a custom dataset, build its sibling manifest explicitly:
 
 ```python
 from pathlib import Path
@@ -290,7 +290,7 @@ The `adml eval` command prints a JSON object with:
   "events": [
     {
       "event_type": "evaluation_completed",
-      "severity": "INFO",
+      "severity": "info",
       "message": "Evaluation suite completed.",
       "source": "evaluator",
       "metadata": {
@@ -352,7 +352,7 @@ sha256sum evals/datasets/baseline.jsonl
 
 ### Pin the code version
 
-`provenance.code.package_version` and `provenance.code.config_fingerprint_sha256` together identify the exact code and configuration that produced the results. Two runs with the same package version and config fingerprint are structurally identical.
+`provenance.code.package_version` identifies the published package release, while `provenance.code.config_fingerprint_sha256` identifies the default configuration. These fields do not identify uncommitted local source changes or arbitrary caller-supplied pipeline objects.
 
 ### Check determinism
 
@@ -375,7 +375,7 @@ The `src.eval.contract` module exposes the full validation API. Use it in script
 
 ### `validate_manifest_document(manifest, *, dataset_path, require_filename_match=True)`
 
-Validate a parsed manifest dict against the evaluation contract. Checks all fields, cross-field invariants, and digest match against the dataset file.
+Validate a parsed manifest dict against the evaluation contract. Checks schema fields and manifest-level cross-field invariants. Use `validate_dataset_against_manifest()` to also verify the dataset digest and rows.
 
 ```python
 from src.eval.contract import validate_manifest_document

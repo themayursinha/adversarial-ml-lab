@@ -53,15 +53,47 @@ def compute_dataset_digest(dataset_path: Path) -> str:
     return hashlib.sha256(dataset_path.read_bytes()).hexdigest()
 
 
-@lru_cache(maxsize=1)
-def evaluation_case_schema() -> dict[str, Any]:
-    """Load the packaged evaluation_case.v1 JSON Schema."""
-    resource = files("src.resources").joinpath("schemas/evaluation_case.v1.json")
+def _load_packaged_schema(relative_path: str) -> dict[str, Any]:
+    resource = files("src.resources").joinpath(relative_path)
     with as_file(resource) as schema_path:
         data = json.loads(Path(schema_path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
-        raise EvaluationContractError("evaluation case schema must be a JSON object")
+        raise EvaluationContractError(f"{relative_path} must be a JSON object")
     return data
+
+
+@lru_cache(maxsize=1)
+def evaluation_case_schema() -> dict[str, Any]:
+    """Load the packaged evaluation_case.v1 JSON Schema."""
+    return _load_packaged_schema("schemas/evaluation_case.v1.json")
+
+
+@lru_cache(maxsize=1)
+def evaluation_manifest_schema() -> dict[str, Any]:
+    """Load the packaged evaluation_manifest.v1 JSON Schema."""
+    return _load_packaged_schema("schemas/evaluation_manifest.v1.json")
+
+
+@lru_cache(maxsize=1)
+def evaluation_run_provenance_schema() -> dict[str, Any]:
+    """Load the packaged evaluation_run_provenance.v1 JSON Schema."""
+    return _load_packaged_schema("schemas/evaluation_run_provenance.v1.json")
+
+
+def validate_json_document(
+    document: Any,
+    schema: dict[str, Any],
+    *,
+    label: str,
+) -> None:
+    """Fail closed when a JSON document violates a packaged JSON Schema."""
+    validator = Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(document), key=lambda err: list(err.path))
+    if errors:
+        first = errors[0]
+        path = ".".join(str(part) for part in first.path)
+        location = f"{label}." if not path else f"{label}.{path}: "
+        raise EvaluationContractError(f"{location}schema violation: {first.message}") from None
 
 
 def validate_row_matches_evaluation_schema(row: Any, line_number: int) -> None:
@@ -92,6 +124,12 @@ def validate_manifest_document(
     """Fail closed on malformed or tampered dataset manifest documents."""
     if not isinstance(manifest, dict):
         raise EvaluationContractError("manifest must be a JSON object")
+
+    validate_json_document(
+        manifest,
+        evaluation_manifest_schema(),
+        label="manifest",
+    )
 
     unknown = set(manifest) - MANIFEST_ALLOWED_KEYS
     if unknown:
@@ -380,6 +418,8 @@ def build_run_provenance(
 ) -> dict[str, Any]:
     """Build deterministic run metadata attached to evaluation results."""
     manifest = manifest or resolve_dataset_manifest(dataset_path)
+    if manifest is not None:
+        validate_dataset_against_manifest(dataset_path, manifest)
     dataset_block: dict[str, Any] = {
         "dataset_filename": dataset_path.name,
         "suite_name": suite_name,
@@ -388,7 +428,7 @@ def build_run_provenance(
         "contract_id": manifest.get("contract_id") if manifest else None,
         "packaged_resource": manifest.get("packaged_resource") if manifest else None,
     }
-    return {
+    provenance = {
         "contract_id": CONTRACT_RUN_V1,
         "dataset": dataset_block,
         "runtime": {
@@ -404,3 +444,9 @@ def build_run_provenance(
             "definitions": metric_definitions(),
         },
     }
+    validate_json_document(
+        provenance,
+        evaluation_run_provenance_schema(),
+        label="run provenance",
+    )
+    return provenance

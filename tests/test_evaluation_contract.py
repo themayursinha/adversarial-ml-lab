@@ -134,6 +134,29 @@ def _minimal_valid_row(case_id: str = "case_one") -> dict:
     }
 
 
+def _manifest_for(dataset: Path, *, case_count: int | bool = 1) -> dict:
+    return {
+        "manifest_version": "1.0.0",
+        "contract_id": "adml.evaluation.dataset.v1",
+        "suite_name": "custom",
+        "dataset_filename": dataset.name,
+        "content_digest_sha256": compute_dataset_digest(dataset),
+        "case_count": case_count,
+        "case_ids": ["case_one"],
+        "family_counts": {"unknown": case_count},
+        "schema_ref": "evaluation_case.v1",
+        "required_fields": [
+            "case_id",
+            "prompt",
+            "context",
+            "task_type",
+            "expected_blocked",
+        ],
+        "allowed_case_types": ["benign", "adversarial"],
+        "allowed_risk_levels": ["low", "medium", "high", "critical"],
+    }
+
+
 def test_load_evaluation_cases_rejects_duplicate_ids_without_manifest(tmp_path: Path) -> None:
     path = tmp_path / "custom.jsonl"
     rows = [_minimal_valid_row("case_one"), _minimal_valid_row("case_one")]
@@ -160,6 +183,19 @@ def test_empty_sibling_manifest_is_rejected(tmp_path: Path) -> None:
     dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
     (tmp_path / "governed.manifest.json").write_text("{}", encoding="utf-8")
     with pytest.raises(EvaluationContractError):
+        load_evaluation_cases(dataset)
+
+
+def test_load_evaluation_cases_rejects_boolean_manifest_counts(tmp_path: Path) -> None:
+    dataset = tmp_path / "boolean_counts.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+    manifest = _manifest_for(dataset, case_count=True)
+    dataset.with_name("boolean_counts.manifest.json").write_text(
+        json.dumps(manifest),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(EvaluationContractError, match="schema violation"):
         load_evaluation_cases(dataset)
 
 
@@ -215,6 +251,36 @@ def test_run_provenance_ignores_absolute_path(tmp_path: Path) -> None:
     )
     assert prov_a == prov_b
     assert "path" not in prov_a["dataset"]
+
+
+def test_build_run_provenance_rejects_invalid_explicit_manifest(tmp_path: Path) -> None:
+    dataset = tmp_path / "custom.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+    invalid_manifest = {
+        "contract_id": "adml.evaluation.dataset.v1",
+        "case_count": 999,
+        "packaged_resource": "datasets/baseline.jsonl",
+    }
+
+    with pytest.raises(EvaluationContractError):
+        build_run_provenance(
+            dataset_path=dataset,
+            suite_name="custom",
+            llm_mode=LLMMode.SIMULATION,
+            manifest=invalid_manifest,
+        )
+
+
+def test_build_run_provenance_rejects_empty_suite_name(tmp_path: Path) -> None:
+    dataset = tmp_path / "custom.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+
+    with pytest.raises(EvaluationContractError, match="schema violation"):
+        build_run_provenance(
+            dataset_path=dataset,
+            suite_name="",
+            llm_mode=LLMMode.SIMULATION,
+        )
 
 
 def test_schema_runtime_parity_rejects_schema_invalid_row() -> None:

@@ -32,3 +32,9 @@ def test_hashed_docker_requirements_exclude_heavy_ml_dependencies() -> None:
 
     for package in ("torch", "torchvision", "sentence-transformers", "wandb"):
         assert f"{package}==" not in hashed
+
+
+def test_hashed_docker_requirements_include_runtime_schema_dependency() -> None:
+    hashed = Path("requirements-hashed.txt").read_text(encoding="utf-8").lower()
+
+    assert "jsonschema==" in hashed

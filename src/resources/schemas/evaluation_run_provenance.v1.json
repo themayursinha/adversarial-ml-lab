@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-ml-lab.local/schemas/evaluation_run_provenance.v1.json",
+  "title": "Adversarial ML Lab evaluation run provenance (v1)",
+  "description": "Frozen contract for an evaluation run's provenance metadata block. Every run result includes a provenance block capturing dataset identity, runtime configuration, code version, and metric definitions. Malformed provenance blocks MUST fail closed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_id",
+    "dataset",
+    "runtime",
+    "code",
+    "metrics"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "Immutable contract identifier for run provenance. Must be 'adml.evaluation.run.v1'.",
+      "enum": ["adml.evaluation.run.v1"]
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_filename",
+        "suite_name",
+        "content_digest_sha256",
+        "case_count",
+        "contract_id",
+        "packaged_resource"
+      ],
+      "properties": {
+        "dataset_filename": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Filename of the dataset used for this run (no absolute path)."
+        },
+        "suite_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Suite name reported in evaluation results."
+        },
+        "content_digest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hex digest of the dataset file bytes at run time."
+        },
+        "case_count": {
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ],
+          "description": "Number of cases in the dataset, or null when no manifest was available."
+        },
+        "contract_id": {
+          "oneOf": [
+            { "type": "string", "enum": ["adml.evaluation.dataset.v1"] },
+            { "type": "null" }
+          ],
+          "description": "Dataset contract identifier from the resolved manifest, or null when no manifest was available."
+        },
+        "packaged_resource": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ],
+          "description": "Packaged resource path from the manifest, or null when no manifest was available."
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "llm_mode",
+        "simulation_seed",
+        "deterministic"
+      ],
+      "properties": {
+        "llm_mode": {
+          "type": "string",
+          "description": "LLM mode used for the run (e.g. 'simulation', 'openai', 'anthropic', 'ollama')."
+        },
+        "simulation_seed": {
+          "type": "null",
+          "description": "Placeholder for future simulation seed support. Always null in v1."
+        },
+        "deterministic": {
+          "type": "boolean",
+          "description": "True when the run uses simulation mode and is fully deterministic."
+        }
+      }
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_version",
+        "config_fingerprint_sha256"
+      ],
+      "properties": {
+        "package_version": {
+          "type": "string",
+          "description": "Semantic version of the adversarial-ml-lab package at run time."
+        },
+        "config_fingerprint_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 digest of the canonical (sorted-key, compact) default defense/LLM configuration."
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definitions"],
+      "properties": {
+        "definitions": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Immutable metric definitions documenting every metric name and its meaning."
+        }
+      }
+    }
+  }
+}
