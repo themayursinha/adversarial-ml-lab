@@ -18,8 +18,9 @@ anthropic==0.109.1 \
     --hash=sha256:83e06b3d9d40ff5898f588020e0cc4e42187de954549a3b5fbe6e2685a09c785 \
     --hash=sha256:ce7d94a7657f2aa29338cca448945eac621b4f62c1794cf461cb32847223e9b8
     # via -r requirements.txt
-antlr4-python3-runtime==4.9.3 \
-    --hash=sha256:f224469b4168294902bb1efa80a8bf7855f24c99aef99cbefc1bcd3cce77881b
+antlr4-python3-runtime==4.13.2 \
+    --hash=sha256:909b647e1d2fc2b70180ac586df3933e38919c85f98ccc656a96cd3f25ef3916 \
+    --hash=sha256:fe3835eb8d33daece0e799090eda89719dbccee7aa39ef94eed3818cafa5a7e8
     # via
     #   hydra-core
     #   omegaconf
