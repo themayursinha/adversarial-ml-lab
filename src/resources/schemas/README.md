@@ -6,6 +6,7 @@ This directory contains the versioned JSON Schema definitions for the adversaria
 
 | File | Scope | Draft |
 |------|-------|-------|
+| `schema.json` | Umbrella JSON Schema (`oneOf`) over case, manifest, and run provenance | 2020-12 |
 | `evaluation_case.v1.json` | A single row in the JSONL dataset | 2020-12 |
 | `evaluation_manifest.v1.json` | The dataset manifest document (`.manifest.json`) | 2020-12 |
 | `evaluation_run_provenance.v1.json` | The run provenance block inside an evaluation result | 2020-12 |
