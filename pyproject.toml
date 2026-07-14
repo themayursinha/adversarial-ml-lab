@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.24.0",
     "omegaconf>=2.3.0",
     "openai>=1.0.0",
+    "jsonschema>=4.23.0",
     "regex>=2023.0.0",
     "structlog>=24.0.0",
 ]
@@ -82,7 +83,7 @@ include = ["src", "src.*"]
 version = {attr = "src.__version__"}
 
 [tool.setuptools.package-data]
-"src.resources" = ["datasets/*.jsonl", "datasets/*.manifest.json"]
+"src.resources" = ["datasets/*.jsonl", "datasets/*.manifest.json", "schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

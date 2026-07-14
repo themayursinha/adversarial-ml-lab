@@ -19,6 +19,7 @@ from src.domain.security_events import (
 )
 from src.eval.contract import (
     EvaluationContractError,
+    assert_unique_case_ids,
     build_run_provenance,
     resolve_dataset_manifest,
     validate_dataset_against_manifest,
@@ -69,6 +70,7 @@ def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:
         validate_dataset_against_manifest(dataset_path, manifest)
 
     cases: list[EvaluationCase] = []
+    case_ids: list[str] = []
 
     with dataset_path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -83,6 +85,7 @@ def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:
                 ) from exc
             if manifest is None:
                 validate_evaluation_row(row, line_number)
+            case_ids.append(row["case_id"])
             cases.append(
                 EvaluationCase(
                     case_id=row["case_id"],
@@ -108,6 +111,9 @@ def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:
                     notes=row.get("notes", ""),
                 )
             )
+
+    if manifest is None:
+        assert_unique_case_ids(case_ids)
 
     return cases
 

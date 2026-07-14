@@ -6,10 +6,12 @@ import hashlib
 import json
 import re
 from dataclasses import asdict, is_dataclass
+from functools import lru_cache
 from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Any
 
+from jsonschema import Draft202012Validator
 from omegaconf import OmegaConf
 
 from src import __version__
@@ -18,7 +20,28 @@ from src.utils.llm_client import LLMMode
 
 CONTRACT_DATASET_V1 = "adml.evaluation.dataset.v1"
 CONTRACT_RUN_V1 = "adml.evaluation.run.v1"
+EVALUATION_CASE_SCHEMA_REF = "evaluation_case.v1"
+MANIFEST_VERSION = "1.0.0"
 CASE_ID_PATTERN = re.compile(r"^[a-z0-9_]+$")
+DIGEST_SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+
+MANIFEST_ALLOWED_KEYS = frozenset(
+    {
+        "manifest_version",
+        "contract_id",
+        "suite_name",
+        "dataset_filename",
+        "content_digest_sha256",
+        "case_count",
+        "case_ids",
+        "family_counts",
+        "packaged_resource",
+        "schema_ref",
+        "required_fields",
+        "allowed_case_types",
+        "allowed_risk_levels",
+    }
+)
 
 
 class EvaluationContractError(ValueError):
@@ -30,9 +53,159 @@ def compute_dataset_digest(dataset_path: Path) -> str:
     return hashlib.sha256(dataset_path.read_bytes()).hexdigest()
 
 
+@lru_cache(maxsize=1)
+def evaluation_case_schema() -> dict[str, Any]:
+    """Load the packaged evaluation_case.v1 JSON Schema."""
+    resource = files("src.resources").joinpath("schemas/evaluation_case.v1.json")
+    with as_file(resource) as schema_path:
+        data = json.loads(Path(schema_path).read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise EvaluationContractError("evaluation case schema must be a JSON object")
+    return data
+
+
+def validate_row_matches_evaluation_schema(row: Any, line_number: int) -> None:
+    """Validate a JSONL row against evaluation_case.v1.json at runtime."""
+    if not isinstance(row, dict):
+        raise EvaluationContractError(f"line {line_number}: row must be a JSON object")
+    validator = Draft202012Validator(evaluation_case_schema())
+    errors = sorted(validator.iter_errors(row), key=lambda err: list(err.path))
+    if errors:
+        first = errors[0]
+        raise EvaluationContractError(
+            f"line {line_number}: schema violation: {first.message}"
+        ) from None
+
+
+def assert_unique_case_ids(case_ids: list[str]) -> None:
+    """Fail closed when duplicate case identifiers appear in a dataset."""
+    if len(case_ids) != len(set(case_ids)):
+        raise EvaluationContractError("duplicate case_id values in dataset")
+
+
+def validate_manifest_document(
+    manifest: Any,
+    *,
+    dataset_path: Path,
+    require_filename_match: bool = True,
+) -> None:
+    """Fail closed on malformed or tampered dataset manifest documents."""
+    if not isinstance(manifest, dict):
+        raise EvaluationContractError("manifest must be a JSON object")
+
+    unknown = set(manifest) - MANIFEST_ALLOWED_KEYS
+    if unknown:
+        raise EvaluationContractError(
+            f"manifest has unknown fields {sorted(unknown)}"
+        )
+
+    if manifest.get("contract_id") != CONTRACT_DATASET_V1:
+        raise EvaluationContractError(
+            f"manifest contract_id must be {CONTRACT_DATASET_V1!r}"
+        )
+    if manifest.get("manifest_version") != MANIFEST_VERSION:
+        raise EvaluationContractError(
+            f"manifest manifest_version must be {MANIFEST_VERSION!r}"
+        )
+    if manifest.get("schema_ref") != EVALUATION_CASE_SCHEMA_REF:
+        raise EvaluationContractError(
+            f"manifest schema_ref must be {EVALUATION_CASE_SCHEMA_REF!r}"
+        )
+
+    suite_name = manifest.get("suite_name")
+    if not isinstance(suite_name, str) or not suite_name.strip():
+        raise EvaluationContractError("manifest suite_name must be a non-empty string")
+
+    dataset_filename = manifest.get("dataset_filename")
+    if not isinstance(dataset_filename, str) or not dataset_filename.strip():
+        raise EvaluationContractError(
+            "manifest dataset_filename must be a non-empty string"
+        )
+    if require_filename_match and dataset_filename != dataset_path.name:
+        raise EvaluationContractError(
+            f"manifest dataset_filename must be {dataset_path.name!r}, "
+            f"got {dataset_filename!r}"
+        )
+
+    digest = manifest.get("content_digest_sha256")
+    if not isinstance(digest, str) or not DIGEST_SHA256_PATTERN.fullmatch(digest):
+        raise EvaluationContractError(
+            "manifest content_digest_sha256 must be a 64-character lowercase hex string"
+        )
+
+    case_count = manifest.get("case_count")
+    if not isinstance(case_count, int) or case_count < 1:
+        raise EvaluationContractError("manifest case_count must be a positive integer")
+
+    case_ids = manifest.get("case_ids")
+    if not isinstance(case_ids, list):
+        raise EvaluationContractError("manifest case_ids must be a list of strings")
+    if len(case_ids) != case_count:
+        raise EvaluationContractError(
+            f"manifest case_ids length {len(case_ids)} != case_count {case_count}"
+        )
+    for case_id in case_ids:
+        if not isinstance(case_id, str) or not CASE_ID_PATTERN.match(case_id):
+            raise EvaluationContractError(f"manifest contains invalid case_id {case_id!r}")
+    if len(case_ids) != len(set(case_ids)):
+        raise EvaluationContractError("manifest case_ids must be unique")
+
+    family_counts = manifest.get("family_counts")
+    if not isinstance(family_counts, dict):
+        raise EvaluationContractError("manifest family_counts must be an object")
+    family_total = 0
+    for family, count in family_counts.items():
+        if not isinstance(family, str) or not family.strip():
+            raise EvaluationContractError("manifest family_counts keys must be strings")
+        if not isinstance(count, int) or count < 0:
+            raise EvaluationContractError(
+                "manifest family_counts values must be non-negative integers"
+            )
+        family_total += count
+    if family_total != case_count:
+        raise EvaluationContractError(
+            f"manifest family_counts sum {family_total} != case_count {case_count}"
+        )
+
+    required_fields = manifest.get("required_fields")
+    if not isinstance(required_fields, list) or not all(
+        isinstance(field, str) for field in required_fields
+    ):
+        raise EvaluationContractError("manifest required_fields must be a list of strings")
+
+    allowed_case_types = manifest.get("allowed_case_types")
+    if not isinstance(allowed_case_types, list) or not all(
+        isinstance(value, str) for value in allowed_case_types
+    ):
+        raise EvaluationContractError(
+            "manifest allowed_case_types must be a list of strings"
+        )
+
+    allowed_risk_levels = manifest.get("allowed_risk_levels")
+    if not isinstance(allowed_risk_levels, list) or not all(
+        isinstance(value, str) for value in allowed_risk_levels
+    ):
+        raise EvaluationContractError(
+            "manifest allowed_risk_levels must be a list of strings"
+        )
+
+    packaged_resource = manifest.get("packaged_resource")
+    if packaged_resource is not None and (
+        not isinstance(packaged_resource, str) or not packaged_resource.strip()
+    ):
+        raise EvaluationContractError(
+            "manifest packaged_resource must be a non-empty string when set"
+        )
+
+
 def load_dataset_manifest(manifest_path: Path) -> dict[str, Any]:
     """Load and parse a dataset manifest JSON file."""
-    data: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise EvaluationContractError(f"invalid manifest JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise EvaluationContractError("manifest must be a JSON object")
     return data
 
 
@@ -79,12 +252,19 @@ def resolve_dataset_manifest(dataset_path: Path) -> dict[str, Any] | None:
     """Return a manifest when the dataset is governed by one."""
     manifest_path = baseline_manifest_path(dataset_path)
     if manifest_path is not None:
-        return load_dataset_manifest(manifest_path)
+        manifest = load_dataset_manifest(manifest_path)
+        validate_manifest_document(manifest, dataset_path=dataset_path)
+        return manifest
 
     digest = compute_dataset_digest(dataset_path)
     resource = files("src.resources").joinpath("datasets/baseline.manifest.json")
     with as_file(resource) as packaged_manifest:
         manifest = load_dataset_manifest(Path(packaged_manifest))
+    validate_manifest_document(
+        manifest,
+        dataset_path=dataset_path,
+        require_filename_match=False,
+    )
     if manifest.get("content_digest_sha256") == digest:
         return manifest
     return None
@@ -99,44 +279,7 @@ def validate_evaluation_row(
     allowed_risk_levels: list[str] | None = None,
 ) -> None:
     """Validate a single JSONL row against evaluation_case.v1 rules."""
-    if not isinstance(row, dict):
-        raise EvaluationContractError(f"line {line_number}: row must be a JSON object")
-
-    for field in ("case_id", "prompt", "context", "task_type", "expected_blocked"):
-        if field not in row:
-            raise EvaluationContractError(f"line {line_number}: missing required field '{field}'")
-
-    case_id = row["case_id"]
-    if not isinstance(case_id, str) or not case_id.strip():
-        raise EvaluationContractError(f"line {line_number}: case_id must be a non-empty string")
-    if not CASE_ID_PATTERN.match(case_id):
-        raise EvaluationContractError(f"line {line_number}: invalid case_id '{case_id}'")
-
-    if not isinstance(row["prompt"], str):
-        raise EvaluationContractError(f"line {line_number}: prompt must be a string")
-    if not isinstance(row["context"], str):
-        raise EvaluationContractError(f"line {line_number}: context must be a string")
-    if not isinstance(row["task_type"], str) or not row["task_type"].strip():
-        raise EvaluationContractError(f"line {line_number}: task_type must be a non-empty string")
-    if not isinstance(row["expected_blocked"], bool):
-        raise EvaluationContractError(f"line {line_number}: expected_blocked must be a boolean")
-
-    extra_keys = set(row) - {
-        "case_id",
-        "prompt",
-        "context",
-        "task_type",
-        "expected_blocked",
-        "case_type",
-        "attack_family",
-        "expected_review",
-        "expected_risk_level",
-        "notes",
-    }
-    if extra_keys:
-        raise EvaluationContractError(
-            f"line {line_number}: unknown fields {sorted(extra_keys)}"
-        )
+    validate_row_matches_evaluation_schema(row, line_number)
 
     if row.get("case_type") is not None and allowed_case_types:
         if row["case_type"] not in allowed_case_types:
@@ -146,10 +289,9 @@ def validate_evaluation_row(
     if row.get("expected_risk_level") is not None and allowed_risk_levels:
         if row["expected_risk_level"] not in allowed_risk_levels:
             raise EvaluationContractError(
-                f"line {line_number}: invalid expected_risk_level '{row['expected_risk_level']}'"
+                f"line {line_number}: invalid expected_risk_level "
+                f"'{row['expected_risk_level']}'"
             )
-    if row.get("expected_review") is not None and not isinstance(row["expected_review"], bool):
-        raise EvaluationContractError(f"line {line_number}: expected_review must be a boolean")
 
     if required_fields:
         for field in required_fields:
@@ -164,6 +306,8 @@ def validate_dataset_against_manifest(
     manifest: dict[str, Any],
 ) -> None:
     """Fail closed when dataset bytes or rows diverge from manifest."""
+    validate_manifest_document(manifest, dataset_path=dataset_path)
+
     digest = compute_dataset_digest(dataset_path)
     expected_digest = manifest.get("content_digest_sha256")
     if expected_digest and digest != expected_digest:
@@ -176,7 +320,6 @@ def validate_dataset_against_manifest(
     allowed_risk_levels = list(manifest.get("allowed_risk_levels") or [])
 
     case_ids: list[str] = []
-    family_counts: dict[str, int] = {}
 
     with dataset_path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
@@ -198,11 +341,8 @@ def validate_dataset_against_manifest(
                 allowed_risk_levels=allowed_risk_levels or None,
             )
             case_ids.append(row["case_id"])
-            family = row.get("attack_family") or "unknown"
-            family_counts[family] = family_counts.get(family, 0) + 1
 
-    if len(case_ids) != len(set(case_ids)):
-        raise EvaluationContractError("duplicate case_id values in dataset")
+    assert_unique_case_ids(case_ids)
 
     expected_ids = manifest.get("case_ids")
     if expected_ids is not None and case_ids != list(expected_ids):
@@ -213,6 +353,16 @@ def validate_dataset_against_manifest(
         raise EvaluationContractError(
             f"case_count mismatch: manifest {expected_count}, file {len(case_ids)}"
         )
+
+    family_counts: dict[str, int] = {}
+    with dataset_path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            row = json.loads(stripped)
+            family = row.get("attack_family") or "unknown"
+            family_counts[family] = family_counts.get(family, 0) + 1
 
     expected_families = manifest.get("family_counts")
     if expected_families is not None and family_counts != dict(expected_families):
@@ -231,11 +381,12 @@ def build_run_provenance(
     """Build deterministic run metadata attached to evaluation results."""
     manifest = manifest or resolve_dataset_manifest(dataset_path)
     dataset_block: dict[str, Any] = {
-        "path": str(dataset_path),
+        "dataset_filename": dataset_path.name,
         "suite_name": suite_name,
         "content_digest_sha256": compute_dataset_digest(dataset_path),
         "case_count": manifest.get("case_count") if manifest else None,
         "contract_id": manifest.get("contract_id") if manifest else None,
+        "packaged_resource": manifest.get("packaged_resource") if manifest else None,
     }
     return {
         "contract_id": CONTRACT_RUN_V1,

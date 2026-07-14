@@ -63,12 +63,13 @@ def test_validate_evaluation_row_rejects_duplicate_ids_in_file(tmp_path: Path) -
     manifest = {
         "manifest_version": "1.0.0",
         "contract_id": "adml.evaluation.dataset.v1",
+        "schema_ref": "evaluation_case.v1",
         "suite_name": "test",
         "dataset_filename": "dup.jsonl",
         "content_digest_sha256": compute_dataset_digest(path),
         "case_count": 2,
-        "case_ids": ["a", "a"],
-        "family_counts": {},
+        "case_ids": ["a", "b"],
+        "family_counts": {"unknown": 2},
         "required_fields": ["case_id", "prompt", "context", "task_type", "expected_blocked"],
         "allowed_case_types": ["benign", "adversarial"],
         "allowed_risk_levels": ["low", "medium", "high", "critical"],
@@ -121,3 +122,106 @@ def test_build_run_provenance_is_deterministic() -> None:
         llm_mode=LLMMode.SIMULATION,
     )
     assert a == b
+
+
+def _minimal_valid_row(case_id: str = "case_one") -> dict:
+    return {
+        "case_id": case_id,
+        "prompt": "p",
+        "context": "",
+        "task_type": "chat",
+        "expected_blocked": False,
+    }
+
+
+def test_load_evaluation_cases_rejects_duplicate_ids_without_manifest(tmp_path: Path) -> None:
+    path = tmp_path / "custom.jsonl"
+    rows = [_minimal_valid_row("case_one"), _minimal_valid_row("case_one")]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    with pytest.raises(EvaluationContractError, match="duplicate"):
+        load_evaluation_cases(path)
+
+
+def test_load_evaluation_cases_rejects_invalid_optional_field_types(tmp_path: Path) -> None:
+    path = tmp_path / "bad_types.jsonl"
+    row = {
+        **_minimal_valid_row(),
+        "case_type": 123,
+        "attack_family": [],
+        "notes": 7,
+    }
+    path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    with pytest.raises(EvaluationContractError):
+        load_evaluation_cases(path)
+
+
+def test_empty_sibling_manifest_is_rejected(tmp_path: Path) -> None:
+    dataset = tmp_path / "governed.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+    (tmp_path / "governed.manifest.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(EvaluationContractError):
+        load_evaluation_cases(dataset)
+
+
+def test_sibling_manifest_invalid_json_rejected(tmp_path: Path) -> None:
+    dataset = tmp_path / "governed.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+    (tmp_path / "governed.manifest.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(EvaluationContractError):
+        load_evaluation_cases(dataset)
+
+
+def test_manifest_metadata_tampering_rejected(tmp_path: Path) -> None:
+    dataset = tmp_path / "tamper.jsonl"
+    dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
+    manifest = {
+        "manifest_version": "1.0.0",
+        "contract_id": "adml.evaluation.dataset.v1",
+        "suite_name": "tamper",
+        "dataset_filename": "wrong.jsonl",
+        "content_digest_sha256": "0" * 64,
+        "case_count": 99,
+        "case_ids": ["other"],
+        "family_counts": {"clean": 1},
+        "required_fields": ["case_id"],
+        "allowed_case_types": ["benign"],
+        "allowed_risk_levels": ["low"],
+    }
+    (tmp_path / "tamper.manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(EvaluationContractError):
+        load_evaluation_cases(dataset)
+
+
+def test_run_provenance_ignores_absolute_path(tmp_path: Path) -> None:
+    row = _minimal_valid_row()
+    content = json.dumps(row) + "\n"
+    path_a = tmp_path / "a" / "suite.jsonl"
+    path_b = tmp_path / "b" / "suite.jsonl"
+    path_a.parent.mkdir(parents=True)
+    path_b.parent.mkdir(parents=True)
+    path_a.write_text(content, encoding="utf-8")
+    path_b.write_text(content, encoding="utf-8")
+    prov_a = build_run_provenance(
+        dataset_path=path_a,
+        suite_name="custom",
+        llm_mode=LLMMode.SIMULATION,
+        manifest=None,
+    )
+    prov_b = build_run_provenance(
+        dataset_path=path_b,
+        suite_name="custom",
+        llm_mode=LLMMode.SIMULATION,
+        manifest=None,
+    )
+    assert prov_a == prov_b
+    assert "path" not in prov_a["dataset"]
+
+
+def test_schema_runtime_parity_rejects_schema_invalid_row() -> None:
+    from src.eval.contract import validate_row_matches_evaluation_schema
+
+    with pytest.raises(EvaluationContractError):
+        validate_row_matches_evaluation_schema(
+            {"case_id": "x", "prompt": 1, "context": "", "task_type": "t", "expected_blocked": False},
+            1,
+        )

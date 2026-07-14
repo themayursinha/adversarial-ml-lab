@@ -1,2 +1,3 @@
 recursive-include src/resources/datasets *.jsonl
 recursive-include src/resources/datasets *.manifest.json
+recursive-include src/resources/schemas *.json
