@@ -97,7 +97,7 @@ def create_demo() -> gr.Blocks:
                         label="Protected Response", elem_classes=["defense-box"]
                     )
 
-            run_injection_btn.click(
+            run_injection_btn.click(  # type: ignore[attr-defined]
                 demo_prompt_injection,
                 inputs=[doc_type, injection_type, injection_pos, defense_toggle],
                 outputs=[original_doc_out, injected_doc_out, vulnerable_out, protected_out],
@@ -148,7 +148,7 @@ def create_demo() -> gr.Blocks:
                         elem_classes=["defense-box"],
                     )
 
-            run_tampering_btn.click(
+            run_tampering_btn.click(  # type: ignore[attr-defined]
                 demo_context_tampering,
                 inputs=[scenario, attack_toggle, defense_level],
                 outputs=[
@@ -221,7 +221,7 @@ def create_demo() -> gr.Blocks:
                         label="Defense Analysis", elem_classes=["defense-box"]
                     )
 
-            run_evasion_btn.click(
+            run_evasion_btn.click(  # type: ignore[attr-defined]
                 demo_inference_evasion,
                 inputs=[input_text, technique, intensity, evasion_defense],
                 outputs=[original_text_out, evaded_text_out, transformations_out, uncertainty_out],
@@ -277,7 +277,7 @@ def create_demo() -> gr.Blocks:
                         label="Protected Response", elem_classes=["defense-box"]
                     )
 
-            run_rag_btn.click(
+            run_rag_btn.click(  # type: ignore[attr-defined]
                 demo_rag_poisoning,
                 inputs=[rag_query, kb_type, rag_attack_toggle, rag_payload, rag_defense],
                 outputs=[rag_query_out, rag_retrieved_out, rag_vulnerable_out, rag_protected_out],
@@ -338,7 +338,7 @@ def create_demo() -> gr.Blocks:
                     with gr.Row():
                         scan_recommendations = gr.Markdown(label="Recommendations")
 
-                    scan_btn.click(
+                    scan_btn.click(  # type: ignore[attr-defined]
                         scan_user_content,
                         inputs=[scan_content, scan_file, scan_type],
                         outputs=[scan_preview, scan_results, scan_recommendations],
@@ -386,7 +386,7 @@ def create_demo() -> gr.Blocks:
                                 elem_classes=["defense-box"],
                             )
 
-                    test_doc_btn.click(
+                    test_doc_btn.click(  # type: ignore[attr-defined]
                         scan_custom_document,
                         inputs=[custom_doc, simulate_attack, attack_payload],
                         outputs=[
