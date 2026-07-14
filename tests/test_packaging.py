@@ -25,3 +25,10 @@ def test_optional_extras_define_rag_vision_and_tracking_dependencies() -> None:
     assert 'rag = [\n    "sentence-transformers>=3.0.0"' in optional
     assert 'vision = [\n    "torch>=2.12.1",\n    "torchvision' in optional
     assert 'tracking = [\n    "wandb>=0.16.0"' in optional
+
+
+def test_hashed_docker_requirements_exclude_heavy_ml_dependencies() -> None:
+    hashed = Path("requirements-hashed.txt").read_text(encoding="utf-8").lower()
+
+    for package in ("torch", "torchvision", "sentence-transformers", "wandb"):
+        assert f"{package}==" not in hashed
