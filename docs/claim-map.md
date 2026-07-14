@@ -71,6 +71,7 @@ Official names per [OWASP GenAI LLM Top 10 (2025)](https://genai.owasp.org/llm-t
 |-------|------|-------|
 | Packaged baseline dataset | `src/resources/datasets/*.jsonl` via `default_evaluation_dataset()` | `tests/test_cli.py::test_run_eval_command_uses_packaged_dataset_by_default` |
 | Deterministic heuristic eval default | `run_evaluation_suite` + simulation LLM | `tests/test_security_pipeline.py::test_run_evaluation_suite_baseline_reports_new_metrics` |
+| Frozen dataset/run contract | `src/eval/contract.py`, baseline manifest + schema | `tests/test_evaluation_contract.py` |
 | Optional LLM-as-judge | `run_evaluation_with_judge`, `src/eval/judge.py` | CLI `--judge`; **gap:** no dedicated pytest for judge path |
 
 ## Unsupported guarantees (explicit)

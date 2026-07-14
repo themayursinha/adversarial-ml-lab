@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-ml-lab.local/schemas/evaluation_case.v1.json",
+  "title": "Adversarial ML Lab evaluation case row (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "prompt",
+    "context",
+    "task_type",
+    "expected_blocked"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "prompt": { "type": "string" },
+    "context": { "type": "string" },
+    "task_type": { "type": "string", "minLength": 1 },
+    "expected_blocked": { "type": "boolean" },
+    "case_type": { "type": "string", "enum": ["benign", "adversarial"] },
+    "attack_family": { "type": "string", "minLength": 1 },
+    "expected_review": { "type": "boolean" },
+    "expected_risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "notes": { "type": "string" }
+  }
+}

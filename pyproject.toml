@@ -82,7 +82,7 @@ include = ["src", "src.*"]
 version = {attr = "src.__version__"}
 
 [tool.setuptools.package-data]
-"src.resources" = ["datasets/*.jsonl"]
+"src.resources" = ["datasets/*.jsonl", "datasets/*.manifest.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -68,6 +68,7 @@ class EvaluationRunResult:
     family_metrics: dict[str, "FamilyMetric"] = field(default_factory=dict)
     case_results: list["EvaluationCaseResult"] = field(default_factory=list)
     events: list[SecurityEvent] = field(default_factory=list)
+    provenance: dict[str, object] | None = None
 
     def to_dict(self, include_case_results: bool = False) -> dict:
         """Return a JSON-serializable dictionary."""
@@ -84,6 +85,8 @@ class EvaluationRunResult:
             },
             "events": [event.to_dict() for event in self.events],
         }
+        if self.provenance is not None:
+            payload["provenance"] = self.provenance
         if include_case_results:
             payload["case_results"] = [result.to_dict() for result in self.case_results]
         return payload

@@ -17,6 +17,13 @@ from src.domain.security_events import (
     FamilyMetric,
     SecurityEvent,
 )
+from src.eval.contract import (
+    EvaluationContractError,
+    build_run_provenance,
+    resolve_dataset_manifest,
+    validate_dataset_against_manifest,
+    validate_evaluation_row,
+)
 from src.services.defense_pipeline import DefensePipeline, PipelineResult
 from src.utils.llm_client import LLMClient, LLMMode, LLMResponse
 
@@ -57,11 +64,25 @@ def default_evaluation_dataset() -> Iterator[Path]:
 
 def load_evaluation_cases(dataset_path: Path) -> list[EvaluationCase]:
     """Load evaluation cases from a JSONL file."""
+    manifest = resolve_dataset_manifest(dataset_path)
+    if manifest is not None:
+        validate_dataset_against_manifest(dataset_path, manifest)
+
     cases: list[EvaluationCase] = []
 
     with dataset_path.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            row = json.loads(line)
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                raise EvaluationContractError(f"line {line_number}: empty line is not allowed")
+            try:
+                row = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise EvaluationContractError(
+                    f"line {line_number}: invalid JSON: {exc}"
+                ) from exc
+            if manifest is None:
+                validate_evaluation_row(row, line_number)
             cases.append(
                 EvaluationCase(
                     case_id=row["case_id"],
@@ -100,6 +121,7 @@ def run_evaluation_suite(
     """Execute evaluation cases and summarize outcome metrics."""
     client = llm_client or LLMClient(mode=LLMMode.SIMULATION)
     pipeline = defense_pipeline or DefensePipeline()
+    manifest = resolve_dataset_manifest(dataset_path)
     cases = load_evaluation_cases(dataset_path)
 
     blocked_cases = 0
@@ -230,6 +252,12 @@ def run_evaluation_suite(
         family_metrics=family_metrics,
         case_results=case_results,
         events=events,
+        provenance=build_run_provenance(
+            dataset_path=dataset_path,
+            suite_name=suite_name,
+            llm_mode=client.mode,
+            manifest=manifest,
+        ),
     )
 
 
@@ -336,6 +364,7 @@ async def run_evaluation_suite_async(
     """
     client = llm_client or LLMClient(mode=LLMMode.SIMULATION)
     pipeline = defense_pipeline or DefensePipeline()
+    manifest = resolve_dataset_manifest(dataset_path)
     cases = load_evaluation_cases(dataset_path)
 
     events: list[SecurityEvent] = []
@@ -475,4 +504,10 @@ async def run_evaluation_suite_async(
         family_metrics=family_metrics,
         case_results=case_results,
         events=events,
+        provenance=build_run_provenance(
+            dataset_path=dataset_path,
+            suite_name=suite_name,
+            llm_mode=client.mode,
+            manifest=manifest,
+        ),
     )

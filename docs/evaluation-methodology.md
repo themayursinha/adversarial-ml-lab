@@ -2,7 +2,13 @@
 
 ## Dataset Format
 
-JSONL rows with fields:
+Rows are JSON objects validated against `evals/schemas/evaluation_case.v1.json`.
+The frozen baseline suite also ships `baseline.manifest.json` (repo copy under
+`evals/datasets/`, packaged copy under `src/resources/datasets/`) with digest,
+case-id ordering, and family counts. Loaders fail closed when a governed dataset
+diverges from its manifest.
+
+JSONL fields:
 - `case_id`
 - `prompt`
 - `context`
@@ -55,3 +61,5 @@ When `--show-cases` is enabled, the output also includes `case_results` with exp
 - The baseline corpus is packaged with the distribution for installed CLI smoke tests.
 - Simulation mode avoids non-deterministic external model calls.
 - Results can be diffed across commits in CI.
+- `adml eval` JSON includes a `provenance` block: dataset digest, package version,
+  default config fingerprint, LLM mode, and metric definitions (`adml.evaluation.run.v1`).
