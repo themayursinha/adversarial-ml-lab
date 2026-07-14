@@ -51,6 +51,19 @@ venv/bin/python -m src.cli eval --suite baseline
 venv/bin/python -m src.cli serve --host 0.0.0.0 --port 7860
 ```
 
+The default installation is CPU-light. Install optional ML features only when needed:
+
+```bash
+# Local embedding model for the RAG CLI workflow
+venv/bin/python -m pip install ".[rag]"
+
+# Torch and torchvision for image adversarial attacks
+venv/bin/python -m pip install ".[vision]"
+
+# Weights & Biases experiment tracking
+venv/bin/python -m pip install ".[tracking]"
+```
+
 ## What It Does Not Do
 
 - It does not ship a real OpenAI-backed runtime. The codebase is intentionally simulation-first.
@@ -94,7 +107,7 @@ make release-check
 
 ## Docker
 
-The container image uses Chainguard Python images with a non-root runtime profile and installs runtime dependencies only.
+The default container uses Chainguard Python images with a non-root runtime profile and installs only the CPU-light core dependencies. RAG embeddings, image attacks, and W&B tracking remain opt-in package extras and are not included in this image.
 
 ```bash
 docker build -t adversarial-ml-lab .

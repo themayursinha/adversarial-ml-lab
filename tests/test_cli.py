@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from argparse import Namespace
 
-from src.cli import run_eval_command, run_scan_command
+from src.cli import (
+    run_eval_command,
+    run_image_attack_command,
+    run_rag_command,
+    run_scan_command,
+)
 from src.utils.logging import configure_silent
 
 
@@ -92,3 +98,37 @@ def test_run_scan_command_has_mode_in_output(capsys, tmp_path) -> None:
     assert exit_code == 0
     assert payload["llm_mode"] == "simulation"
     assert "model" in payload
+
+
+def test_image_attack_without_vision_extra_returns_actionable_error(monkeypatch, capsys) -> None:
+    real_import = builtins.__import__
+
+    def import_without_torch(name, *args, **kwargs):
+        if name == "torch":
+            raise ImportError("torch intentionally unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_torch)
+
+    exit_code = run_image_attack_command(
+        _ns(attack="fgsm", epsilon=0.03, steps=10, quiet=True)
+    )
+
+    assert exit_code == 1
+    assert 'pip install "adversarial-ml-lab[vision]"' in capsys.readouterr().err
+
+
+def test_rag_without_rag_extra_returns_actionable_error(monkeypatch, capsys) -> None:
+    real_import = builtins.__import__
+
+    def import_without_sentence_transformers(name, *args, **kwargs):
+        if name == "sentence_transformers":
+            raise ImportError("sentence-transformers intentionally unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_sentence_transformers)
+
+    exit_code = run_rag_command(_ns(query="What is the refund window?", poison=False, quiet=True))
+
+    assert exit_code == 1
+    assert 'pip install "adversarial-ml-lab[rag]"' in capsys.readouterr().err

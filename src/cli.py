@@ -411,7 +411,11 @@ def run_image_attack_command(args: argparse.Namespace) -> int:
     try:
         import torch  # noqa: F401
     except ImportError:
-        print("error: torch not installed. pip install torch torchvision", file=sys.stderr)
+        print(
+            'error: image attacks require optional dependencies. '
+            'pip install "adversarial-ml-lab[vision]"',
+            file=sys.stderr,
+        )
         return 1
 
     from src.attacks.vision import (
@@ -463,6 +467,17 @@ def run_image_attack_command(args: argparse.Namespace) -> int:
 def run_rag_command(args: argparse.Namespace) -> int:
     """Test RAG retrieval and poisoning defense."""
     _setup_logging(args)
+
+    try:
+        import sentence_transformers  # noqa: F401
+    except ImportError:
+        print(
+            'error: RAG requires optional dependencies. '
+            'pip install "adversarial-ml-lab[rag]"',
+            file=sys.stderr,
+        )
+        return 1
+
     from src.attacks.rag_poisoning import RagPoisoningAttack
     from src.rag.vector_store import RagVectorStore
     from src.services.defense_pipeline import DefensePipeline
