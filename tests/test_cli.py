@@ -27,8 +27,11 @@ def _ns(**kwargs: object) -> Namespace:
     return Namespace(**defaults)
 
 
-def test_run_scan_command_emits_json(capsys, tmp_path) -> None:
+def test_run_scan_command_emits_json(capsys, tmp_path, monkeypatch) -> None:
     configure_silent()
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
     sample_file = tmp_path / "sample.txt"
     sample_file.write_text("Quarterly report with normal business metrics.", encoding="utf-8")
 

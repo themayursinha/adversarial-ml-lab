@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import ast
 import importlib
+import re
 from functools import lru_cache
 from pathlib import Path
 
 import pytest
+import yaml
 
 from src.utils.llm_client import LLMClient, LLMMode
 
@@ -61,7 +63,13 @@ CONTROL_SYMBOL_CLAIMS: list[tuple[str, str, str, str]] = [
         "Anomaly pre-filter on raw input",
         "src.defenses.anomaly_scorer",
         "TextAnomalyScorer",
-        "tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events",
+        "tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization",
+    ),
+    (
+        "Pipeline stage order (anomaly before canonicalize)",
+        "src.services.defense_pipeline",
+        "DefensePipeline",
+        "tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization",
     ),
     (
         "Baseline eval harness",
@@ -170,8 +178,22 @@ def test_dockerfile_default_entrypoint_runs_gradio_app() -> None:
 
 
 def test_compose_api_overrides_entrypoint_and_simulation_first_env() -> None:
-    compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-    assert 'entrypoint: ["python", "-m", "src.cli"]' in compose
-    assert 'command: ["api", "--host", "0.0.0.0", "--port", "7861"]' in compose
-    assert "OLLAMA_HOST=${OLLAMA_HOST:-}" in compose
-    assert "OLLAMA_HOST=${OLLAMA_HOST:-http://ollama" not in compose
+    compose_path = REPO_ROOT / "docker-compose.yml"
+    raw = compose_path.read_text(encoding="utf-8")
+    assert not any(line.strip().startswith("version:") for line in raw.splitlines()[:3])
+    compose = yaml.safe_load(raw)
+    api = compose["services"]["api"]
+    assert api["entrypoint"] == ["python", "-m", "src.cli"]
+    assert api["command"] == ["api", "--host", "0.0.0.0", "--port", "7861"]
+    env_lines = api["environment"]
+    ollama_entries = [line for line in env_lines if line.startswith("OLLAMA_HOST=")]
+    assert ollama_entries == ["OLLAMA_HOST=${OLLAMA_HOST:-}"]
+
+
+def test_make_compose_targets_ollama_host_semantics() -> None:
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    assert re.search(r"^up:\n\tdocker compose up -d api\s*$", makefile, re.MULTILINE)
+    assert "OLLAMA_HOST=http://ollama:11434 docker compose --profile llm" in makefile
+    assert "OLLAMA_HOST=http://ollama:11434 docker compose --profile full" in makefile
+    up_ollama_hits = len(re.findall(r"^up:\n\tOLLAMA_HOST=", makefile, re.MULTILINE))
+    assert up_ollama_hits == 0

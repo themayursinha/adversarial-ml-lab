@@ -15,7 +15,7 @@ Recommendations when you deploy beyond local demos:
 
 ## Network and Secrets
 
-- **Simulation-first:** no live model API calls unless the operator sets `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_HOST` (compose `api` leaves `OLLAMA_HOST` empty by default).
+- **Simulation-first:** no live model API calls unless the operator sets `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_HOST` (compose `api` leaves `OLLAMA_HOST` empty by default; `make up` keeps that default). `make up-llm` and `make up-full` export `OLLAMA_HOST=http://ollama:11434` for the API container when Ollama is started.
 - Inject secrets via environment variables only (`src/utils/llm_client.py` loads keys from env).
 - Avoid logging raw prompts that may contain credentials; use structured logging levels in production.
 

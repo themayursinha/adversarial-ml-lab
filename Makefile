@@ -47,10 +47,10 @@ up:
 	docker compose up -d api
 
 up-full:
-	docker compose --profile full up -d
+	OLLAMA_HOST=http://ollama:11434 docker compose --profile full up -d
 
 up-llm:
-	docker compose --profile llm up -d api ollama
+	OLLAMA_HOST=http://ollama:11434 docker compose --profile llm up -d api ollama
 
 down:
 	docker compose down

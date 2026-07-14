@@ -1,6 +1,6 @@
 # Claim-to-Code Map
 
-This document ties public architecture, threat-model, and control-mapping statements to **live modules** and **named tests**. Symbol import and exact pytest node ids are checked by `tests/test_doc_claims.py`.
+This document ties public architecture, threat-model, and control-mapping statements to **live modules** and **named tests**. The hard-coded contract matrix in `tests/test_doc_claims.py::CONTROL_SYMBOL_CLAIMS` checks that each listed symbol imports and that each cited pytest node id exists; it does **not** parse this markdown file or prove that a test exercises every claim. Use **gap** / **partial** labels below when no direct test exists.
 
 ## Simulation-first boundaries
 
@@ -9,7 +9,7 @@ This document ties public architecture, threat-model, and control-mapping statem
 | `LLMClient()` defaults to simulation | `LLMClient(mode=LLMMode.SIMULATION)`; `SimulatedLLM` in `src/utils/llm_client.py` | `tests/test_doc_claims.py::test_llm_client_defaults_to_simulation_mode` |
 | CLI/API use `LLMClient.from_env()` and auto-select live backends when env keys/host are set | `from_env` prefers Anthropic → OpenAI → Ollama when vars present; otherwise simulation | `tests/test_modules.py::TestLLMClient::test_from_env_auto_detects_openai`, `test_from_env_falls_back_to_simulation` |
 | Explicit `--mode` / constructor mode overrides auto-detect | `LLMClient.from_env(mode=...)` and CLI `--mode` | `tests/test_modules.py::TestLLMClient::test_from_env_explicit_mode_overrides` |
-| `adml scan` reports simulation when env is empty | `run_scan_command` uses `from_env` | `tests/test_cli.py::test_run_scan_command_emits_json` |
+| `adml scan` reports simulation when env is empty | `run_scan_command` uses `from_env` | `tests/test_cli.py::test_run_scan_command_emits_json` (clears backend env via `monkeypatch`) |
 | Gradio demo is the default container entrypoint | `Dockerfile` `ENTRYPOINT ["python", "app.py"]` | `tests/test_doc_claims.py::test_dockerfile_default_entrypoint_runs_gradio_app` |
 | FastAPI is opt-in (`adml api` / compose `api` service) | `src/api/server.py`; compose overrides image entrypoint | `tests/test_api.py::test_health_endpoint`, `tests/test_doc_claims.py::test_compose_api_overrides_entrypoint_and_simulation_first_env` |
 | Not production multi-tenant isolation | In-process session store only; no authn/z on API | — (documented limitation) |
@@ -19,9 +19,9 @@ This document ties public architecture, threat-model, and control-mapping statem
 | Claim | Code truth | Tests |
 |-------|------------|-------|
 | Untrusted input via web or CLI | `src/web/controllers.py`, `src/cli.py` `scan`/`fuzz` | `tests/test_cli.py` |
-| Output path: anomaly on **raw** input, then canonicalization, then filter and uncertainty | `DefensePipeline.analyze_output` order in `src/services/defense_pipeline.py` | `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events` |
+| Output path: anomaly on **raw** input, then canonicalization, then filter and uncertainty | `DefensePipeline.analyze_output` order in `src/services/defense_pipeline.py` | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` |
 | Canonicalization utility | `canonicalize_text` in `src/services/canonicalization.py` | `tests/test_security_pipeline.py::test_canonicalize_text_removes_zero_width` |
-| Structured security events | `src/domain/security_events.py`, `PipelineResult.events` | `test_defense_pipeline_emits_detection_events` |
+| Structured security events | `src/domain/security_events.py`, `PipelineResult.events` | `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events` |
 | RAG retrieved-chunk defense | `DefensePipeline.analyze_rag_context` → `RagPoisoningDefense` | `tests/test_security_pipeline.py::test_defense_pipeline_analyze_rag_context_flags_poisoned_chunk` |
 | Baseline `rag_poisoning` **eval family** (poisoned context in JSONL, not chunk API) | `run_evaluation_suite` on packaged baseline | `tests/test_security_pipeline.py::test_run_evaluation_suite_baseline_reports_new_metrics` (family label only) |
 
@@ -36,10 +36,10 @@ Official names per [OWASP GenAI LLM Top 10 (2025)](https://genai.owasp.org/llm-t
 | LLM02 Sensitive information disclosure | `ContentRedactor` | `tests/test_modules.py::TestIsolationServer::test_redaction` |
 | LLM03 Supply chain | CI `bandit`, `pip_audit`, CycloneDX SBOM | **gap:** no dedicated pytest; `make security`, `.github/workflows/ci.yml` |
 | LLM04 Data and model poisoning | `RagPoisoningDefense`, `RagPoisoningAttack` | `tests/test_security_pipeline.py::test_defense_pipeline_analyze_rag_context_flags_poisoned_chunk` |
-| LLM05 Improper output handling | `ContextAwareFilter` on canonical model output | `test_defense_pipeline_emits_detection_events` |
+| LLM05 Improper output handling | `ContextAwareFilter` on canonical model output | `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events` |
 | LLM06 Excessive agency | — | **gap:** no tool/agent execution boundary controls |
-| LLM07 System prompt leakage (demo heuristics) | Output filter signatures (e.g. “reveal system prompt”) | partial via `test_defense_pipeline_emits_detection_events` |
-| LLM08 Vector and embedding weaknesses | `RagPoisoningDefense` | `test_defense_pipeline_analyze_rag_context_flags_poisoned_chunk` |
+| LLM07 System prompt leakage (demo heuristics) | Output filter signatures (e.g. “reveal system prompt”) | **partial:** `test_defense_pipeline_emits_detection_events` (adversarial output, not a dedicated leakage suite) |
+| LLM08 Vector and embedding weaknesses | `RagPoisoningDefense` | `tests/test_security_pipeline.py::test_defense_pipeline_analyze_rag_context_flags_poisoned_chunk` |
 | LLM09 Misinformation | — | **gap:** no misinformation/factuality control |
 | LLM10 Unbounded consumption | — | **gap:** no rate/cost enforcement |
 

@@ -1,6 +1,6 @@
 # Control Mapping (Security-First)
 
-Each row links to code and tests. Full matrix: [claim-map.md](claim-map.md). Automated symbol + pytest node checks: `tests/test_doc_claims.py`.
+Each row links to code and tests. Full matrix: [claim-map.md](claim-map.md). `tests/test_doc_claims.py` enforces the hard-coded `CONTROL_SYMBOL_CLAIMS` matrix (symbol import + pytest node existence), not automatic parsing of these docs.
 
 ## OWASP LLM Top 10 (2025)
 
@@ -8,7 +8,7 @@ Names follow the [2025 OWASP GenAI LLM Top 10](https://genai.owasp.org/llm-top-1
 
 - **LLM01 Prompt Injection**
   - Demos: `PromptInjectionAttack` (`src/attacks/prompt_injection.py`) — `tests/test_modules.py::TestPromptInjection::test_payload_listing`
-  - Mitigation path: `DefensePipeline` + `ContextAwareFilter` — `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events`, `tests/test_modules.py::TestContextFilter::test_detects_injection_indicators`
+  - Mitigation path: `DefensePipeline` + `ContextAwareFilter` — `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events`, `tests/test_modules.py::TestContextFilter::test_detects_injection_indicators`; stage order — `test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization`
 - **LLM02 Sensitive Information Disclosure**
   - `ContentRedactor` in `src/defenses/isolation_server.py` — `tests/test_modules.py::TestIsolationServer::test_redaction`
 - **LLM03 Supply Chain Vulnerabilities**
@@ -29,8 +29,8 @@ Names follow the [2025 OWASP GenAI LLM Top 10](https://genai.owasp.org/llm-top-1
 
 | Topic | Implementation | Tests |
 |-------|----------------|-------|
-| Pipeline stage order | Anomaly (raw input) → canonicalize → filter → uncertainty | `test_defense_pipeline_emits_detection_events` |
-| Canonicalization | `canonicalize_text` | `test_canonicalize_text_removes_zero_width` |
+| Pipeline stage order | Anomaly (raw input) → canonicalize → filter → uncertainty | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` |
+| Canonicalization | `canonicalize_text` | `tests/test_security_pipeline.py::test_canonicalize_text_removes_zero_width` |
 | Context tampering demos | `ContextTamperingAttack` | `tests/test_modules.py` |
 | Inference evasion demos | `InferenceEvasionAttack` | `tests/test_modules.py` |
 | Session isolation | `ContextIsolationServer` | `TestIsolationServer::test_session_isolation` |
