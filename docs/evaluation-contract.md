@@ -85,7 +85,7 @@ Validates the `.manifest.json` document that accompanies a JSONL dataset. The ma
 
 | Field | Type | Constraint |
 |-------|------|------------|
-| `packaged_resource` | string | non-empty when set |
+| `packaged_resource` | string | non-empty when set; must match `^datasets/[A-Za-z0-9][A-Za-z0-9._-]*\.jsonl$` |
 
 **Runtime invariants** (enforced by Python, not by JSON Schema alone):
 
@@ -226,6 +226,7 @@ A manifest must satisfy all of the following:
 5. **`content_digest_sha256`** matches the actual SHA-256 of the JSONL file bytes.
 6. **`case_ids`** are unique and ordered exactly as they appear in the JSONL file.
 7. **`dataset_filename`** matches the JSONL filename (enforced when the manifest is a sibling file).
+8. **`packaged_resource` parity** — when the manifest references a packaged copy (`datasets/baseline.jsonl`), the on-disk dataset bytes must match the packaged resource byte-for-byte. The `validate_dataset()` entrypoint and `scripts/parity.py` CLI enforce this automatically for the baseline.
 
 ### Common mistakes
 
@@ -457,6 +458,49 @@ from src.eval.contract import compute_dataset_digest
 digest = compute_dataset_digest(Path("my-suite.jsonl"))
 ```
 
+### `load_dataset_manifest(manifest_path)`
+
+Load and parse a dataset manifest JSON file. Raises `EvaluationContractError` on malformed JSON.
+
+```python
+from src.eval.contract import load_dataset_manifest
+
+manifest = load_dataset_manifest(Path("my-suite.manifest.json"))
+```
+
+### `validate_dataset(dataset_path, manifest=None, *, check_packaged_parity=True)`
+
+Full-stack validation: resolves the manifest automatically when omitted, then validates schema, digest, ordering, family counts, and optional source/package parity. Returns the resolved manifest dict or `None` for ungoverned datasets.
+
+```python
+from src.eval.validator import validate_dataset
+
+manifest = validate_dataset(Path("my-suite.jsonl"))
+# manifest is the resolved dict when governed, None otherwise
+```
+
+### `compute_config_fingerprint_sha256()`
+
+Deterministic SHA-256 digest of the canonical default defense/LLM configuration. Used inside the provenance `code.config_fingerprint_sha256` field.
+
+```python
+from src.eval.metadata import compute_config_fingerprint_sha256
+
+fingerprint = compute_config_fingerprint_sha256()
+# e.g. "e5f6a7b8..."
+```
+
+### `frozen_metric_definitions()`
+
+Immutable metric definitions embedded into every run provenance block. Returns a dict of metric name → description.
+
+```python
+from src.eval.metadata import frozen_metric_definitions
+
+defs = frozen_metric_definitions()
+# {'pass_rate': 'Fraction of cases where ...', ...}
+```
+
 ### `EvaluationContractError`
 
 All validation errors are raised as `EvaluationContractError` (a subclass of `ValueError`). Catch it in tests or scripts:
@@ -589,6 +633,28 @@ In CI, every evaluation run:
 | Same configuration | `code.config_fingerprint_sha256` — deterministic digest of default config |
 | Same LLM mode | `runtime.llm_mode` — always `"simulation"` for deterministic runs |
 | Same metric definitions | `metrics.definitions` — frozen with each run |
+
+### Parity gate
+
+The `scripts/parity.py` CLI (aliased as `adml parity`) performs a **source/package parity gate** on the baseline dataset. It checks:
+
+1. Source and packaged JSONL files are **byte-identical**.
+2. Source and packaged manifest documents have **identical fields**.
+3. Both JSONL files match their respective manifest **digests, case_id ordering, family_counts, and row schema**.
+4. When `packaged_resource` is set, the installed package's copy is also verified against the on-disk file.
+
+```bash
+# Run the parity gate
+python scripts/parity.py
+
+# With JSON output
+python scripts/parity.py --json
+
+# Skip installed-package check (CI without installed wheel)
+python scripts/parity.py --no-packaged-parity
+```
+
+This gate runs in CI after every baseline change. A parity failure blocks the pipeline — the source and packaged copies must never diverge.
 
 ### Cross-run comparison workflow
 
