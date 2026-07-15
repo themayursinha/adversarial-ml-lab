@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-ml-lab.local/schemas/evaluation_schema.json",
+  "title": "Adversarial ML Lab evaluation contract schemas (v1 umbrella)",
+  "description": "Machine-checkable, versioned JSON Schema bundle for evaluation dataset rows, dataset manifests, and run-result provenance. Immutable contract IDs are fixed per branch; breaking changes require new *.v2.json files. Alias: schema.json (identical oneOf).",
+  "oneOf": [
+    { "$ref": "evaluation_case.v1.json" },
+    { "$ref": "evaluation_manifest.v1.json" },
+    { "$ref": "evaluation_run_provenance.v1.json" }
+  ]
+}

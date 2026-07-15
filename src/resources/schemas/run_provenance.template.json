@@ -1,0 +1,28 @@
+{
+  "contract_id": "adml.evaluation.run.v1",
+  "dataset": {
+    "dataset_filename": "YOUR_DATASET.jsonl",
+    "suite_name": "YOUR_SUITE_NAME",
+    "content_digest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "case_count": 1,
+    "contract_id": "adml.evaluation.dataset.v1",
+    "packaged_resource": "datasets/YOUR_DATASET.jsonl"
+  },
+  "runtime": {
+    "llm_mode": "simulation",
+    "simulation_seed": null,
+    "deterministic": true
+  },
+  "code": {
+    "package_version": "0.0.0",
+    "commit_sha": "0000000000000000000000000000000000000000",
+    "config_fingerprint_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "metrics": {
+    "definitions": {
+      "pass_rate": "Fraction of cases where blocked expectation matched.",
+      "review_match_rate": "Fraction of cases where review expectation matched.",
+      "risk_match_rate": "Fraction of cases where risk-level expectation matched."
+    }
+  }
+}

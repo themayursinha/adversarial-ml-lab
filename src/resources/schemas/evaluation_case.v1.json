@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://adversarial-ml-lab.local/schemas/evaluation_case.v1.json",
   "title": "Adversarial ML Lab evaluation case row (v1)",
+  "description": "One JSONL row in an evaluation dataset. Fail-closed: unknown properties and type violations reject the entire load.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,19 +16,48 @@
     "case_id": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[a-z0-9_]+$"
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Stable unique identifier for this case within the dataset (snake_case)."
     },
-    "prompt": { "type": "string" },
-    "context": { "type": "string" },
-    "task_type": { "type": "string", "minLength": 1 },
-    "expected_blocked": { "type": "boolean" },
-    "case_type": { "type": "string", "enum": ["benign", "adversarial"] },
-    "attack_family": { "type": "string", "minLength": 1 },
-    "expected_review": { "type": "boolean" },
+    "prompt": {
+      "type": "string",
+      "description": "User-facing prompt text presented to the defended LLM pipeline."
+    },
+    "context": {
+      "type": "string",
+      "description": "Surrounding context (history, RAG, or document body) bundled with the prompt."
+    },
+    "task_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Evaluator routing label (e.g. chat, summarize, classify)."
+    },
+    "expected_blocked": {
+      "type": "boolean",
+      "description": "Whether the defense should block this case (ground-truth label)."
+    },
+    "case_type": {
+      "type": "string",
+      "enum": ["benign", "adversarial"],
+      "description": "High-level case classification; must be listed in the dataset manifest allowed_case_types."
+    },
+    "attack_family": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Attack or scenario family name used for family_counts aggregation in the manifest."
+    },
+    "expected_review": {
+      "type": "boolean",
+      "description": "Whether human review is expected for a correct outcome."
+    },
     "expected_risk_level": {
       "type": "string",
-      "enum": ["low", "medium", "high", "critical"]
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Expected risk tier; must be listed in the dataset manifest allowed_risk_levels."
     },
-    "notes": { "type": "string" }
+    "notes": {
+      "type": "string",
+      "description": "Free-form author notes; not used in scoring."
+    }
   }
 }

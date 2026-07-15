@@ -6,10 +6,14 @@ This directory contains the versioned JSON Schema definitions for the adversaria
 
 | File | Scope | Draft |
 |------|-------|-------|
-| `schema.json` | Umbrella JSON Schema (`oneOf`) over case, manifest, and run provenance | 2020-12 |
+| `evaluation_schema.json` | Canonical umbrella name (`oneOf` over case, manifest, run provenance) | 2020-12 |
+| `schema.json` | Identical umbrella alias (backward compatible) | 2020-12 |
 | `evaluation_case.v1.json` | A single row in the JSONL dataset | 2020-12 |
 | `evaluation_manifest.v1.json` | The dataset manifest document (`.manifest.json`) | 2020-12 |
 | `evaluation_run_provenance.v1.json` | The run provenance block inside an evaluation result | 2020-12 |
+| `dataset.manifest.template.json` | Fill-in template for a new dataset manifest (digest, ordering, families) | — |
+| `run_provenance.template.json` | Fill-in template for run metadata (digest, code, config fingerprint, seed, metrics) | — |
+| `examples/*.example.json` | Validated sample documents checked in CI | — |
 
 ---
 
@@ -175,6 +179,14 @@ build_run_provenance()
     v
 evaluation_run_provenance.v1.json  --->  validate provenance block
 ```
+
+---
+
+## Templates and examples
+
+- **`dataset.manifest.template.json`** — start here for a governed dataset: set `suite_name`, `dataset_filename`, replace `content_digest_sha256` with `sha256(file bytes)`, fill `case_ids` in JSONL order, and align `family_counts` with row `attack_family` values. Enumerated labels live in `allowed_case_types` and `allowed_risk_levels`.
+- **`run_provenance.template.json`** — documents the run/result metadata block: dataset digest, `code.package_version`, `code.commit_sha`, `code.config_fingerprint_sha256`, `runtime.simulation_seed` (null in v1), and `metrics.definitions`.
+- **`examples/`** — committed instances validated in `tests/test_evaluation_schemas.py`. Regenerate with `scripts/generate_schema_examples.py` after baseline changes.
 
 ---
 

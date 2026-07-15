@@ -82,6 +82,7 @@ def test_dataset_digest_stable_after_copy(tmp_path: Path) -> None:
         "schemas/evaluation_manifest.v1.json",
         "schemas/evaluation_run_provenance.v1.json",
         "schemas/schema.json",
+        "schemas/evaluation_schema.json",
         "datasets/baseline.jsonl",
         "datasets/baseline.manifest.json",
     ],

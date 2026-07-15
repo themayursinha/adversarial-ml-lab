@@ -1,0 +1,25 @@
+{
+  "manifest_version": "1.0.0",
+  "contract_id": "adml.evaluation.dataset.v1",
+  "suite_name": "YOUR_SUITE_NAME",
+  "dataset_filename": "YOUR_DATASET.jsonl",
+  "content_digest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "case_count": 1,
+  "case_ids": ["example_case_id"],
+  "family_counts": {
+    "example_family": 1
+  },
+  "packaged_resource": "datasets/YOUR_DATASET.jsonl",
+  "schema_ref": "evaluation_case.v1",
+  "required_fields": [
+    "case_id",
+    "prompt",
+    "context",
+    "task_type",
+    "expected_blocked",
+    "case_type",
+    "attack_family"
+  ],
+  "allowed_case_types": ["benign", "adversarial"],
+  "allowed_risk_levels": ["low", "medium", "high", "critical"]
+}

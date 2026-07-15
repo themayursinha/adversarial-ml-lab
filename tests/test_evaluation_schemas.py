@@ -24,6 +24,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BASELINE_JSONL = REPO_ROOT / "evals/datasets/baseline.jsonl"
 BASELINE_MANIFEST = REPO_ROOT / "evals/datasets/baseline.manifest.json"
 SCHEMA_BUNDLE = REPO_ROOT / "src/resources/schemas/schema.json"
+EVALUATION_SCHEMA = REPO_ROOT / "src/resources/schemas/evaluation_schema.json"
+EXAMPLES_DIR = REPO_ROOT / "src/resources/schemas/examples"
 
 
 def _first_schema_error(document: Any, schema: dict) -> str | None:
@@ -53,6 +55,27 @@ def test_schema_json_umbrella_is_valid_and_resolves_refs() -> None:
     assert bundle["oneOf"][0]["$ref"] == "evaluation_case.v1.json"
     assert bundle["oneOf"][1]["$ref"] == "evaluation_manifest.v1.json"
     assert bundle["oneOf"][2]["$ref"] == "evaluation_run_provenance.v1.json"
+
+
+def test_evaluation_schema_json_matches_umbrella_contract() -> None:
+    evaluation_schema = json.loads(EVALUATION_SCHEMA.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(evaluation_schema)
+    assert evaluation_schema["oneOf"] == json.loads(SCHEMA_BUNDLE.read_text(encoding="utf-8"))[
+        "oneOf"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("example_file", "schema_loader"),
+    [
+        ("baseline_case.example.json", evaluation_case_schema),
+        ("baseline_manifest.example.json", evaluation_manifest_schema),
+        ("baseline_run_provenance.example.json", evaluation_run_provenance_schema),
+    ],
+)
+def test_packaged_example_documents_validate(example_file: str, schema_loader) -> None:
+    document = json.loads((EXAMPLES_DIR / example_file).read_text(encoding="utf-8"))
+    assert _first_schema_error(document, schema_loader()) is None
 
 
 def test_evaluation_case_schema_accepts_baseline_row() -> None:
