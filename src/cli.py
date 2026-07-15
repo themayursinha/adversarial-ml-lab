@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from src.config.loader import load_config
+from src.eval.simulate import run_simulate_command
 from src.eval.validate import run_validate_command
 from src.services import (
     DefensePipeline,
@@ -291,6 +292,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suppress success message.",
     )
     validate_parser.set_defaults(func=run_validate_command)
+
+    simulate_parser = subparsers.add_parser(
+        "simulate",
+        help="Run evaluation in simulation mode (no LLM API); emit schema-checked report.",
+    )
+    simulate_parser.add_argument(
+        "dataset",
+        nargs="?",
+        help="Path to evaluation JSONL dataset. Defaults to the packaged baseline.",
+    )
+    simulate_parser.add_argument(
+        "--dataset",
+        dest="dataset_opt",
+        help="Path to evaluation JSONL dataset (alternative to positional).",
+    )
+    simulate_parser.add_argument(
+        "--suite",
+        default=None,
+        help="Suite name for reporting (default: manifest suite_name or dataset stem).",
+    )
+    simulate_parser.add_argument(
+        "--show-cases",
+        action="store_true",
+        help="Include per-case evaluation results in the JSON output.",
+    )
+    simulate_parser.add_argument(
+        "--no-packaged-parity",
+        action="store_true",
+        help="Skip packaged_resource byte parity check.",
+    )
+    simulate_parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress non-JSON chatter (report is always printed to stdout).",
+    )
+    simulate_parser.set_defaults(func=run_simulate_command)
 
     serve_parser = subparsers.add_parser("serve", help="Run the web demo server.")
     serve_parser.add_argument("--host", default="127.0.0.1", help="Host bind address.")

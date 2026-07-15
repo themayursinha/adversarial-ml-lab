@@ -23,6 +23,7 @@ from src.eval.metadata import (
     assert_metadata_dataset_digest,
     build_run_metadata,
 )
+from src.eval.package_gate import assert_evaluation_package_gate
 from src.utils.llm_client import LLMMode
 
 
@@ -85,6 +86,7 @@ def validate_dataset(
     are checked for unique ids, required labels, allowed families/types,
     canonical ordering, digest integrity, and optional source/package parity.
     """
+    assert_evaluation_package_gate()
     path = Path(dataset_path)
     resolved = manifest
 

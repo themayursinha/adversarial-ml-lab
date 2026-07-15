@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 import subprocess
 from dataclasses import asdict, dataclass, is_dataclass
@@ -119,8 +117,9 @@ def compute_config_fingerprint_sha256() -> str:
         payload = asdict(config)
     else:
         payload = OmegaConf.to_container(config, resolve=True)
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    from src.eval.digest import compute_config_digest
+
+    return compute_config_digest(payload)
 
 
 def resolve_code_commit_sha(repo_root: Path | None = None) -> str | None:

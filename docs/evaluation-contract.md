@@ -253,6 +253,14 @@ adml eval --suite baseline
 
 This uses the packaged baseline dataset and its bundled manifest. The run is deterministic in simulation mode.
 
+### Offline simulation pipeline (no API)
+
+```bash
+adml simulate --suite baseline
+```
+
+`simulate` validates the dataset against the frozen contract, runs the heuristic harness with `LLMMode.SIMULATION` (never auto-detects API keys), and prints a JSON report with `simulation: true` and schema-checked `provenance`. Example output: `evals/examples/baseline_simulation_report.json`.
+
 ### Custom dataset with manifest
 
 ```bash
@@ -477,6 +485,16 @@ from src.eval.validator import validate_dataset
 
 manifest = validate_dataset(Path("my-suite.jsonl"))
 # manifest is the resolved dict when governed, None otherwise
+```
+
+### `assert_evaluation_package_gate()`
+
+Fail-closed check that every runtime dependency in `requirements.txt` is importable before dataset validation runs. `validate_dataset()` invokes this automatically (cached once per process).
+
+```python
+from src.eval.package_gate import assert_evaluation_package_gate
+
+assert_evaluation_package_gate()
 ```
 
 ### `compute_config_fingerprint_sha256()`

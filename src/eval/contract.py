@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from functools import lru_cache
@@ -46,7 +45,9 @@ class EvaluationContractError(ValueError):
 
 def compute_dataset_digest(dataset_path: Path) -> str:
     """Return SHA-256 hex digest of the raw dataset file bytes."""
-    return hashlib.sha256(dataset_path.read_bytes()).hexdigest()
+    from src.eval.digest import compute_dataset_file_digest
+
+    return compute_dataset_file_digest(dataset_path)
 
 
 def _load_packaged_schema(relative_path: str) -> dict[str, Any]:
