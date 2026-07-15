@@ -130,6 +130,7 @@ Validates the `provenance` block inside an `EvaluationRunResult`. Every evaluati
 | Field | Type | Constraint |
 |-------|------|------------|
 | `package_version` | string | semver from `src.__version__` |
+| `commit_sha` | string or null | 40-character lowercase Git SHA when repository metadata is available |
 | `config_fingerprint_sha256` | string | `^[a-f0-9]{64}$` — deterministic digest of default config |
 
 ### `metrics` block

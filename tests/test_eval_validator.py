@@ -137,6 +137,14 @@ def test_validate_dataset_rejects_packaged_parity_violation(tmp_path: Path) -> N
         validate_dataset(dataset, manifest)
 
 
+def test_validate_dataset_rejects_packaged_resource_path_traversal() -> None:
+    manifest = load_dataset_manifest(BASELINE_MANIFEST)
+    manifest["packaged_resource"] = "../datasets/baseline.jsonl"
+
+    with pytest.raises(EvaluationContractError, match="schema violation"):
+        validate_dataset(BASELINE_JSONL, manifest)
+
+
 def test_validate_dataset_rejects_digest_mismatch(tmp_path: Path) -> None:
     dataset = tmp_path / "one.jsonl"
     dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
@@ -211,6 +219,14 @@ def test_validate_dataset_rejects_empty_line(tmp_path: Path) -> None:
     dataset = tmp_path / "blank.jsonl"
     dataset.write_text(json.dumps(_minimal_valid_row()) + "\n\n", encoding="utf-8")
     with pytest.raises(EvaluationContractError, match="empty line"):
+        validate_dataset(dataset)
+
+
+def test_validate_dataset_rejects_empty_dataset(tmp_path: Path) -> None:
+    dataset = tmp_path / "empty.jsonl"
+    dataset.write_text("", encoding="utf-8")
+
+    with pytest.raises(EvaluationContractError, match="at least one"):
         validate_dataset(dataset)
 
 

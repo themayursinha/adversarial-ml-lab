@@ -106,7 +106,7 @@ Validates the `provenance` block inside every `EvaluationRunResult`. This is the
 | `contract_id` | string | yes | must be `"adml.evaluation.run.v1"` |
 | `dataset` | object | yes | dataset identity block |
 | `runtime` | object | yes | LLM mode and determinism |
-| `code` | object | yes | package version and config fingerprint |
+| `code` | object | yes | package version, commit identity, and config fingerprint |
 | `metrics` | object | yes | metric definitions |
 
 **`dataset` block:**
@@ -133,6 +133,7 @@ Validates the `provenance` block inside every `EvaluationRunResult`. This is the
 | Field | Type | Description |
 |-------|------|-------------|
 | `package_version` | string | semver version of the adversarial-ml-lab package |
+| `commit_sha` | string or null | Git HEAD SHA for source-tree runs; `null` when repository metadata is unavailable |
 | `config_fingerprint_sha256` | string | SHA-256 digest of the default configuration |
 
 **`metrics` block:**
@@ -194,6 +195,12 @@ manifest_path.write_text(json.dumps(manifest, indent=2))
 ### Step 3: Validate
 
 The manifest and dataset are validated automatically at load time. To validate ahead of time:
+
+```bash
+adml validate evals/datasets/my-suite.jsonl
+# or
+python scripts/validate.py evals/datasets/my-suite.jsonl --json
+```
 
 ```python
 from src.eval.contract import resolve_dataset_manifest, validate_dataset_against_manifest
@@ -317,6 +324,7 @@ The `adml eval` command prints a JSON object with:
     },
     "code": {
       "package_version": "0.1.0",
+      "commit_sha": "0123456789abcdef0123456789abcdef01234567",
       "config_fingerprint_sha256": "e5f6a7b8..."
     },
     "metrics": {
@@ -352,7 +360,7 @@ sha256sum evals/datasets/baseline.jsonl
 
 ### Pin the code version
 
-`provenance.code.package_version` identifies the published package release, while `provenance.code.config_fingerprint_sha256` identifies the default configuration. These fields do not identify uncommitted local source changes or arbitrary caller-supplied pipeline objects.
+`provenance.code.package_version` identifies the published package release, `provenance.code.commit_sha` identifies Git HEAD when repository metadata is available, and `provenance.code.config_fingerprint_sha256` identifies the default configuration. These fields do not identify uncommitted local source changes or arbitrary caller-supplied pipeline objects.
 
 ### Check determinism
 
@@ -577,7 +585,7 @@ In CI, every evaluation run:
 |-------------|------------------------------|
 | Same dataset content | `content_digest_sha256` in manifest and provenance — byte-level fingerprint |
 | Same row ordering | `case_ids` array in manifest defines canonical order; JSONL must match |
-| Same code version | `code.package_version` in provenance |
+| Same code version | `code.package_version` and `code.commit_sha` in provenance |
 | Same configuration | `code.config_fingerprint_sha256` — deterministic digest of default config |
 | Same LLM mode | `runtime.llm_mode` — always `"simulation"` for deterministic runs |
 | Same metric definitions | `metrics.definitions` — frozen with each run |
@@ -594,12 +602,12 @@ import json
 with open('results/run-1.json') as f:
     p = json.load(f)['provenance']
 print('Dataset:', p['dataset']['content_digest_sha256'])
-print('Code:', p['code']['package_version'], p['code']['config_fingerprint_sha256'])
+print('Code:', p['code']['package_version'], p['code']['commit_sha'], p['code']['config_fingerprint_sha256'])
 print('Runtime:', p['runtime']['llm_mode'], 'deterministic:', p['runtime']['deterministic'])
 "
 ```
 
-Two runs with identical provenance fields (dataset digest, package version, config fingerprint, llm_mode) are **structurally comparable** — any difference in pass_rate is a real behavioral change, not a configuration or data artifact.
+Two clean-tree runs with identical provenance fields (dataset digest, package version, commit SHA, config fingerprint, and LLM mode) are **structurally comparable**. Uncommitted source changes and arbitrary caller-supplied pipeline objects remain outside the v1 fingerprint.
 
 ---
 

@@ -275,7 +275,7 @@ def test_build_run_provenance_rejects_empty_suite_name(tmp_path: Path) -> None:
     dataset = tmp_path / "custom.jsonl"
     dataset.write_text(json.dumps(_minimal_valid_row()) + "\n", encoding="utf-8")
 
-    with pytest.raises(EvaluationContractError, match="schema violation"):
+    with pytest.raises(EvaluationContractError, match="suite_name"):
         build_run_provenance(
             dataset_path=dataset,
             suite_name="",

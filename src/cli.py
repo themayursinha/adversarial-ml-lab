@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from src.config.loader import load_config
+from src.eval.validate import run_validate_command
 from src.services import (
     DefensePipeline,
     default_evaluation_dataset,
@@ -255,6 +256,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Log results to Weights & Biases (requires WANDB_API_KEY).",
     )
     eval_parser.set_defaults(func=run_eval_command)
+
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate an evaluation JSONL dataset against schema and manifest rules.",
+    )
+    validate_parser.add_argument(
+        "dataset",
+        nargs="?",
+        help="Path to evaluation JSONL dataset.",
+    )
+    validate_parser.add_argument(
+        "--dataset",
+        dest="dataset_opt",
+        help="Path to evaluation JSONL dataset (alternative to positional).",
+    )
+    validate_parser.add_argument(
+        "--manifest",
+        help="Path to evaluation_manifest.v1 JSON.",
+    )
+    validate_parser.add_argument(
+        "--no-packaged-parity",
+        action="store_true",
+        help="Skip packaged_resource byte parity check.",
+    )
+    validate_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="On success, print a JSON summary.",
+    )
+    validate_parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress success message.",
+    )
+    validate_parser.set_defaults(func=run_validate_command)
 
     serve_parser = subparsers.add_parser("serve", help="Run the web demo server.")
     serve_parser.add_argument("--host", default="127.0.0.1", help="Host bind address.")

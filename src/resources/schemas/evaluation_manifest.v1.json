@@ -77,6 +77,7 @@
     "packaged_resource": {
       "type": "string",
       "minLength": 1,
+      "pattern": "^datasets/[A-Za-z0-9][A-Za-z0-9._-]*\\.jsonl$",
       "description": "Optional path to the resource within the installed package (e.g. 'datasets/baseline.jsonl'). Used when resolving manifests at runtime without a filesystem sibling."
     },
     "schema_ref": {

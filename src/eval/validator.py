@@ -11,15 +11,17 @@ from src.eval.contract import (
     EvaluationContractError,
     assert_unique_case_ids,
     baseline_manifest_path,
-    build_run_provenance,
-    compute_dataset_digest,
     evaluation_manifest_schema,
-    evaluation_run_provenance_schema,
     load_dataset_manifest,
     resolve_dataset_manifest,
     validate_dataset_against_manifest,
     validate_evaluation_row,
     validate_json_document,
+)
+from src.eval.metadata import (
+    RunContext,
+    assert_metadata_dataset_digest,
+    build_run_metadata,
 )
 from src.utils.llm_client import LLMMode
 
@@ -120,20 +122,12 @@ def generate_run_metadata(
 
     Default ``llm_mode`` is simulation so callers do not need live API credentials.
     """
-    metadata = build_run_provenance(
+    context = RunContext.for_dataset(
         dataset_path=Path(dataset_path),
         suite_name=suite_name,
         llm_mode=llm_mode,
         manifest=manifest,
     )
-    validate_json_document(
-        metadata,
-        evaluation_run_provenance_schema(),
-        label="run metadata",
-    )
-    digest = metadata.get("dataset", {}).get("content_digest_sha256")
-    if digest != compute_dataset_digest(Path(dataset_path)):
-        raise EvaluationContractError(
-            "run metadata dataset digest does not match dataset file bytes"
-        )
+    metadata = build_run_metadata(context)
+    assert_metadata_dataset_digest(metadata, Path(dataset_path))
     return metadata

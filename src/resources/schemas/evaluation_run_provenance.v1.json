@@ -96,12 +96,20 @@
       "additionalProperties": false,
       "required": [
         "package_version",
+        "commit_sha",
         "config_fingerprint_sha256"
       ],
       "properties": {
         "package_version": {
           "type": "string",
           "description": "Semantic version of the adversarial-ml-lab package at run time."
+        },
+        "commit_sha": {
+          "oneOf": [
+            { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+            { "type": "null" }
+          ],
+          "description": "Git commit SHA for a source-tree run, or null when no repository metadata is available (for example, an installed wheel)."
         },
         "config_fingerprint_sha256": {
           "type": "string",

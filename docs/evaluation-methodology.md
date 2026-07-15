@@ -62,4 +62,5 @@ When `--show-cases` is enabled, the output also includes `case_results` with exp
 - Simulation mode avoids non-deterministic external model calls.
 - Results can be diffed across commits in CI.
 - `adml eval` JSON includes a `provenance` block: dataset digest, package version,
-  default config fingerprint, LLM mode, and metric definitions (`adml.evaluation.run.v1`).
+  Git commit SHA when available, default config fingerprint, LLM mode, and metric
+  definitions (`adml.evaluation.run.v1`).

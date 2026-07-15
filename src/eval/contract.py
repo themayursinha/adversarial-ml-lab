@@ -5,17 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import asdict, is_dataclass
 from functools import lru_cache
 from importlib.resources import as_file, files
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from omegaconf import OmegaConf
 
-from src import __version__
-from src.config.loader import get_default_config
 from src.utils.llm_client import LLMMode
 
 CONTRACT_DATASET_V1 = "adml.evaluation.dataset.v1"
@@ -111,6 +107,8 @@ def validate_row_matches_evaluation_schema(row: Any, line_number: int) -> None:
 
 def assert_unique_case_ids(case_ids: list[str]) -> None:
     """Fail closed when duplicate case identifiers appear in a dataset."""
+    if not case_ids:
+        raise EvaluationContractError("dataset must contain at least one evaluation case")
     if len(case_ids) != len(set(case_ids)):
         raise EvaluationContractError("duplicate case_id values in dataset")
 
@@ -249,33 +247,15 @@ def load_dataset_manifest(manifest_path: Path) -> dict[str, Any]:
 
 def metric_definitions() -> dict[str, str]:
     """Immutable metric definitions included in run provenance."""
-    return {
-        "pass_rate": (
-            "Fraction of cases where observed blocked/not-blocked matches expected_blocked."
-        ),
-        "blocked_cases": "Count of cases where the defense pipeline blocked model output.",
-        "review_cases": "Count of cases flagged for human review by the pipeline.",
-        "review_match_rate": (
-            "Among cases with expected_review set, fraction where needs_human_review matches."
-        ),
-        "risk_match_rate": (
-            "Among cases with expected_risk_level set, fraction where detection risk_level matches."
-        ),
-        "family_metrics": (
-            "Per attack_family aggregates: total_cases, blocked_cases, review_cases, pass_rate."
-        ),
-    }
+    from src.eval.metadata import frozen_metric_definitions
+
+    return frozen_metric_definitions()
 
 
 def _config_fingerprint() -> str:
-    """Deterministic digest of default defense/LLM config used for eval runs."""
-    config = get_default_config()
-    if is_dataclass(config):
-        payload = asdict(config)
-    else:
-        payload = OmegaConf.to_container(config, resolve=True)
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    from src.eval.metadata import compute_config_fingerprint_sha256
+
+    return compute_config_fingerprint_sha256()
 
 
 def baseline_manifest_path(dataset_path: Path) -> Path | None:
@@ -417,36 +397,12 @@ def build_run_provenance(
     manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build deterministic run metadata attached to evaluation results."""
-    manifest = manifest or resolve_dataset_manifest(dataset_path)
-    if manifest is not None:
-        validate_dataset_against_manifest(dataset_path, manifest)
-    dataset_block: dict[str, Any] = {
-        "dataset_filename": dataset_path.name,
-        "suite_name": suite_name,
-        "content_digest_sha256": compute_dataset_digest(dataset_path),
-        "case_count": manifest.get("case_count") if manifest else None,
-        "contract_id": manifest.get("contract_id") if manifest else None,
-        "packaged_resource": manifest.get("packaged_resource") if manifest else None,
-    }
-    provenance = {
-        "contract_id": CONTRACT_RUN_V1,
-        "dataset": dataset_block,
-        "runtime": {
-            "llm_mode": llm_mode.value,
-            "simulation_seed": None,
-            "deterministic": llm_mode == LLMMode.SIMULATION,
-        },
-        "code": {
-            "package_version": __version__,
-            "config_fingerprint_sha256": _config_fingerprint(),
-        },
-        "metrics": {
-            "definitions": metric_definitions(),
-        },
-    }
-    validate_json_document(
-        provenance,
-        evaluation_run_provenance_schema(),
-        label="run provenance",
+    from src.eval.metadata import RunContext, build_run_metadata
+
+    context = RunContext.for_dataset(
+        dataset_path=dataset_path,
+        suite_name=suite_name,
+        llm_mode=llm_mode,
+        manifest=manifest,
     )
-    return provenance
+    return build_run_metadata(context)
