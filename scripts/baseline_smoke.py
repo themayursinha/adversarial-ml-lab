@@ -9,15 +9,18 @@ import sys
 import tempfile
 from pathlib import Path
 
-from src.eval.contract import (
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from src.eval.contract import (  # noqa: E402
     EvaluationContractError,
     compute_dataset_digest,
     load_dataset_manifest,
 )
-from src.eval.validator import generate_run_metadata, validate_dataset
-from src.utils.llm_client import LLMMode
+from src.eval.validator import generate_run_metadata, validate_dataset  # noqa: E402
+from src.utils.llm_client import LLMMode  # noqa: E402
 
-REPO = Path(__file__).resolve().parents[1]
 EVALS_JSONL = REPO / "evals/datasets/baseline.jsonl"
 EVALS_MANIFEST = REPO / "evals/datasets/baseline.manifest.json"
 PKG_JSONL = REPO / "src/resources/datasets/baseline.jsonl"
