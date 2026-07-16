@@ -4,12 +4,16 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from src.eval.simulate import run_simulate
-from src.eval.simulation import stable_simulation_snapshot
-
 REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from src.eval.simulate import run_simulate  # noqa: E402
+from src.eval.simulation import stable_simulation_snapshot  # noqa: E402
+
 OUT = REPO / "evals/examples/baseline_simulation_report.json"
 
 
