@@ -1,13 +1,18 @@
 """Generate packaged schema example documents (dev maintenance)."""
+
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-from src.eval.contract import build_run_provenance, load_dataset_manifest
-from src.utils.llm_client import LLMMode
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.eval.contract import build_run_provenance, load_dataset_manifest  # noqa: E402
+from src.utils.llm_client import LLMMode  # noqa: E402
+
 EXAMPLES = REPO_ROOT / "src/resources/schemas/examples"
 JSONL = REPO_ROOT / "evals/datasets/baseline.jsonl"
 MANIFEST_PATH = REPO_ROOT / "evals/datasets/baseline.manifest.json"
