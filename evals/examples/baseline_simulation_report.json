@@ -715,7 +715,6 @@
     },
     "code": {
       "package_version": "0.2.1",
-      "commit_sha": "d773cf18362ca1855c993283f7cdc963cc7265e7",
       "config_fingerprint_sha256": "7b1bf88d1f7930d5aa25da6c6e86c5a985077afcbec605631f7667ba30f108d5"
     },
     "metrics": {

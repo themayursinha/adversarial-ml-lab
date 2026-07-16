@@ -20,14 +20,21 @@ SIMULATION_PIPELINE_ID = "evaluation_simulation_v1"
 
 def stable_simulation_snapshot(report: dict[str, Any]) -> dict[str, Any]:
     """
-    Return a JSON-serializable copy of ``report`` with volatile event timestamps removed.
+    Return a JSON-serializable copy of ``report`` with volatile fields removed.
 
-    Used for deterministic regression checks; live CLI output still includes timestamps.
+    Strips event timestamps and code commit identity so checked-in examples and
+    regression comparisons stay stable across commits. Live CLI output still
+    includes full provenance.
     """
     snapshot: dict[str, Any] = json.loads(json.dumps(report))
     for event in snapshot.get("events", []):
         if isinstance(event, dict):
             event.pop("timestamp", None)
+    provenance = snapshot.get("provenance")
+    if isinstance(provenance, dict):
+        code = provenance.get("code")
+        if isinstance(code, dict):
+            code.pop("commit_sha", None)
     return snapshot
 
 
