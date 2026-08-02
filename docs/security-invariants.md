@@ -81,8 +81,8 @@ Executable checks: `tests/test_security_invariants.py` plus the node IDs cited b
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
 | K-01 | Package gate fails closed on missing import | package gate | `tests/test_package_gate.py::test_package_gate_fails_closed_on_missing_import` | missing dep | — |
-| K-02 | Heavy ML not in default install | packaging | `tests/test_package_gate.py::test_heavy_ml_dependencies_are_not_installed_by_default` | unsafe default bloat | — |
-| K-03 | Optional extras declared | pyproject | `tests/test_package_gate.py::test_optional_extras_define_rag_vision_and_tracking_dependencies` | — | — |
+| K-02 | Heavy ML not in default install | packaging | `tests/test_packaging.py::test_heavy_ml_dependencies_are_not_installed_by_default` | unsafe default bloat | — |
+| K-03 | Optional extras declared | pyproject | `tests/test_packaging.py::test_optional_extras_define_rag_vision_and_tracking_dependencies` | — | — |
 | K-04 | Baseline eval packaged (50 cases) | resources | CLI/API eval tests | missing resource paths covered in eval validators | Small baseline only |
 | K-05 | Dockerfile default is Gradio | Dockerfile | `tests/test_doc_claims.py::test_dockerfile_default_entrypoint_runs_gradio_app` | entrypoint | App binds `0.0.0.0:7860` in `app.py` — operator network exposure |
 
