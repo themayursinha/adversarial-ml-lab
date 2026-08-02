@@ -276,21 +276,24 @@ class TestLogging:
 
     def test_configure_logging_console(self):
         configure_logging(level="DEBUG", json_output=False)
+        configure_silent()
 
     def test_configure_logging_json(self):
         configure_logging(level="INFO", json_output=True)
+        configure_silent()
 
     def test_configure_silent(self):
         configure_silent()
 
     def test_logger_emits_to_stderr(self, capsys):
-        configure_logging(level="INFO", json_output=False)
         import structlog
 
+        configure_logging(level="INFO", json_output=False)
         log = structlog.get_logger("test")
         log.info("test.message", key="value")
         captured = capsys.readouterr()
         assert "test.message" in captured.err
+        configure_silent()
 
 
 class TestPromptInjection:

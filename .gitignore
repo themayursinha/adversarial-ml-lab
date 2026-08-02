@@ -69,3 +69,6 @@ logs/
 
 # Sigstore attestations
 *.sigstore.json
+
+# Local coverage dumps
+evidence/*.json

@@ -12,7 +12,8 @@
 - `src/cli.py`: engineer-facing CLI (`scan`, `eval`, `serve`, `api`, `fuzz`, `rag`, …).
 - `src/plugins/` and `src/integrations/`: optional extension and NeMo Guardrails bridge code.
 
-See [Claim-to-Code Map](claim-map.md) for module-to-test traceability.
+See [Claim-to-Code Map](claim-map.md) for module-to-test traceability and
+[Security invariants and failure-path map](security-invariants.md) for P1 security coverage.
 
 ## Data Flow (default output path)
 
