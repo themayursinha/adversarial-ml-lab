@@ -134,3 +134,7 @@ Commit gate for this P1 card: **all listed direct tests pass** + `make lint` + `
 4. Residual risks #1–#3 accepted explicitly in P2 design (local-only defaults, no overclaim)
 
 P1 gate card should re-run clean checkout verification after this lands.
+
+## 12. P1 gate decision
+
+See [p1-gate-decision-2026-08-02.md](p1-gate-decision-2026-08-02.md) for the conditional GO record and fresh verification evidence.
