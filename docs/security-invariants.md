@@ -60,7 +60,7 @@ Executable checks: `tests/test_security_invariants.py` plus the node IDs cited b
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
 | S-01 | `LLMClient()` defaults to simulation | `llm_client.py` | `tests/test_doc_claims.py::test_llm_client_defaults_to_simulation_mode` | default | — |
-| S-02 | CLI no-`--mode` stays simulation (no ambient-key leak) | `_resolve_mode` | `tests/test_cli.py::test_resolve_mode_defaults_to_simulation`, `test_run_scan_command_emits_json` | unsafe default | — |
+| S-02 | CLI no-`--mode` stays simulation (no ambient-key leak) | `_resolve_mode` | `tests/test_cli.py::test_resolve_mode_defaults_to_simulation`, `tests/test_cli.py::test_run_scan_command_emits_json` | unsafe default | — |
 | S-03 | Explicit `--mode auto` enables env auto-detect | `_resolve_mode("auto")` | `tests/test_cli.py::test_resolve_mode_auto_means_env_detect` | opt-in live | Operator responsibility |
 | S-04 | OpenAI mode without key fails closed | backends | `tests/test_modules.py::TestLLMClient::test_openai_mode_requires_api_key` | missing credential | — |
 | S-05 | Gradio `APP_STATE` always simulation | `src/web/state.py` | `tests/test_web_state.py::test_app_state_singleton_is_simulation` | privacy default | No runtime toggle in stock UI |
@@ -71,18 +71,18 @@ Executable checks: `tests/test_security_invariants.py` plus the node IDs cited b
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
 | A-01 | `/health` ok + simulation | routes | `tests/test_api.py::test_health_endpoint` | — | No authn |
-| A-02 | `/scan` clean vs adversarial | routes | `test_scan_endpoint_clean_input`, `test_scan_endpoint_adversarial_input` | policy path | No authn/rate limit |
-| A-03 | Missing body / invalid task → 422 | pydantic | `test_scan_endpoint_validation`, `test_scan_endpoint_invalid_task` | malformed | — |
-| A-04 | Unknown eval suite → 404 | routes | `test_eval_endpoint_unknown_suite` | missing suite | — |
-| A-05 | Empty content rejected or handled | schemas/routes | `tests/test_security_invariants.py::test_api_scan_rejects_null_content` | null content | Whitespace-only still accepted by schema |
+| A-02 | `/scan` clean vs adversarial | routes | `tests/test_api.py::test_scan_endpoint_clean_input`, `tests/test_api.py::test_scan_endpoint_adversarial_input` | policy path | No authn/rate limit |
+| A-03 | Missing body / invalid task → 422 | pydantic | `tests/test_api.py::test_scan_endpoint_validation`, `tests/test_api.py::test_scan_endpoint_invalid_task` | malformed | — |
+| A-04 | Unknown eval suite → 404 | routes | `tests/test_api.py::test_eval_endpoint_unknown_suite` | missing suite | — |
+| A-05 | Null content rejected; empty string handled | schemas/routes | `tests/test_security_invariants.py::test_api_scan_rejects_null_content`, `tests/test_security_invariants.py::test_api_scan_accepts_empty_string_content` | null + empty | Whitespace-only still accepted |
 
 ## 7. Packaging / supply chain defaults
 
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
 | K-01 | Package gate fails closed on missing import | package gate | `tests/test_package_gate.py::test_package_gate_fails_closed_on_missing_import` | missing dep | — |
-| K-02 | Heavy ML not in default install | packaging | `test_heavy_ml_dependencies_are_not_installed_by_default` | unsafe default bloat | — |
-| K-03 | Optional extras declared | pyproject | `test_optional_extras_define_rag_vision_and_tracking_dependencies` | — | — |
+| K-02 | Heavy ML not in default install | packaging | `tests/test_package_gate.py::test_heavy_ml_dependencies_are_not_installed_by_default` | unsafe default bloat | — |
+| K-03 | Optional extras declared | pyproject | `tests/test_package_gate.py::test_optional_extras_define_rag_vision_and_tracking_dependencies` | — | — |
 | K-04 | Baseline eval packaged (50 cases) | resources | CLI/API eval tests | missing resource paths covered in eval validators | Small baseline only |
 | K-05 | Dockerfile default is Gradio | Dockerfile | `tests/test_doc_claims.py::test_dockerfile_default_entrypoint_runs_gradio_app` | entrypoint | App binds `0.0.0.0:7860` in `app.py` — operator network exposure |
 
