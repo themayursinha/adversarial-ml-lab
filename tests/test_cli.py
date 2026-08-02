@@ -29,11 +29,17 @@ def _ns(**kwargs: object) -> Namespace:
     return Namespace(**defaults)
 
 
-def test_resolve_mode_none_means_env_auto_detect() -> None:
-    """No --mode must not force SIMULATION; from_env handles auto-detect."""
-    assert _resolve_mode(None) is None
+def test_resolve_mode_defaults_to_simulation() -> None:
+    """No --mode must stay simulation even if ambient API keys exist."""
+    assert _resolve_mode(None) is LLMMode.SIMULATION
+    assert _resolve_mode("") is LLMMode.SIMULATION
     assert _resolve_mode("simulation") is LLMMode.SIMULATION
     assert _resolve_mode("openai") is LLMMode.OPENAI
+
+
+def test_resolve_mode_auto_means_env_detect() -> None:
+    """Explicit --mode auto opts into from_env auto-detection."""
+    assert _resolve_mode("auto") is None
 
 
 def test_run_scan_command_emits_json(capsys, tmp_path, monkeypatch) -> None:

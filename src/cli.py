@@ -22,15 +22,17 @@ from src.utils.logging import configure_logging, configure_silent
 
 
 def _resolve_mode(mode_arg: str | None) -> LLMMode | None:
-    """Resolve an explicit CLI mode, or None for environment auto-detection.
+    """Resolve CLI mode for ``LLMClient.from_env``.
 
-    When ``mode_arg`` is omitted, callers must pass ``None`` into
-    ``LLMClient.from_env`` so Anthropic/OpenAI/Ollama env vars can select a
-    live backend. There is no silent force-to-simulation on the no-mode path.
+    - omitted / default → simulation (privacy-safe; no ambient-key disclosure)
+    - ``auto`` → ``None`` so ``from_env`` auto-selects Anthropic/OpenAI/Ollama from env
+    - explicit backend name → that ``LLMMode``
     """
-    if mode_arg:
-        return LLMMode(mode_arg)
-    return None
+    if mode_arg is None or mode_arg == "":
+        return LLMMode.SIMULATION
+    if mode_arg == "auto":
+        return None
+    return LLMMode(mode_arg)
 
 
 def _resolve_mode_or_none(mode_arg: str | None) -> LLMMode | None:
@@ -203,8 +205,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan_parser.add_argument(
         "--mode",
-        choices=["simulation", "openai", "anthropic", "ollama"],
-        help="LLM backend mode (default: simulation).",
+        choices=["simulation", "auto", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: simulation). Use 'auto' to select from env keys/host.",
     )
     scan_parser.add_argument(
         "--log-level",
@@ -412,8 +414,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fuzz_parser.add_argument(
         "--mode",
-        choices=["simulation", "openai", "anthropic", "ollama"],
-        help="LLM backend mode (default: auto-detect).",
+        choices=["simulation", "auto", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: simulation). Use 'auto' to select from env keys/host.",
     )
     fuzz_parser.add_argument(
         "--target-url",

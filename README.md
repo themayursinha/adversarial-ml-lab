@@ -6,7 +6,7 @@ Security-focused adversarial LLM lab for engineers who want to demonstrate, test
 
 This project is a polished public `0.2.x` release line intended for sharing, demos, and reproducible security experiments.
 
-- Simulation-first: `LLMClient()` defaults to simulation; CLI/API call `LLMClient.from_env()` and only use live backends when you set API keys or `OLLAMA_HOST` (or pass explicit `--mode`).
+- Simulation-first: `LLMClient()` and CLI scan/fuzz default to simulation. Live backends need an explicit CLI `--mode auto|openai|anthropic|ollama` (or operator-enabled API). Gradio stays simulation-only.
 - Public surface: web demo, CLI workflows, baseline evaluation suite, and supporting security docs.
 - Not a production gateway: this repo demonstrates controls and failure modes; it is not a hosted policy engine or a hardened multi-tenant service.
 

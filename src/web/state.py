@@ -39,9 +39,10 @@ def create_app_state(
 ) -> AppState:
     """Build app dependencies from configuration.
 
-    The Gradio web UI defaults to **simulation** so uploaded content stays local
-    unless an operator explicitly constructs state with ``llm_mode=None``
-    (environment auto-detect) or another backend mode.
+    The Gradio web entrypoint uses the module-level ``APP_STATE`` singleton,
+    which is always created with **simulation** so uploaded content stays local.
+    ``llm_mode`` is available for tests and non-default host apps; the stock
+    ``create_demo()`` path does not swap ``APP_STATE`` at runtime.
     """
     cfg = config or get_default_config()
 

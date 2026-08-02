@@ -29,9 +29,10 @@ The Gradio lab UI may use lighter demo shortcuts (`detect_injection` plus chunk 
 ## Simulation vs optional live backends
 
 - **Constructor default:** `LLMClient()` uses `LLMMode.SIMULATION` (`SimulatedLLM`) — no external inference required.
-- **CLI/API default path:** without explicit `--mode`, CLI passes `mode=None` into `LLMClient.from_env()`, which auto-selects Anthropic, OpenAI, or Ollama when matching env vars are set; otherwise falls back to simulation.
-- **Gradio web default:** `create_app_state()` forces **simulation** so the privacy note holds; operators can opt into env auto-detect only by constructing state with `llm_mode=None`.
-- **Explicit override:** pass `mode=` to `from_env` or `--mode` on the CLI to force simulation or a specific backend.
+- **CLI default path:** without `--mode`, CLI forces **simulation** so ambient API keys cannot accidentally send file/stdin content to a live backend. Help text matches this contract.
+- **CLI live opt-in:** pass `--mode auto` to run `LLMClient.from_env()` auto-detect (Anthropic → OpenAI → Ollama → simulation), or pass an explicit backend name.
+- **Gradio web:** always uses module-level `APP_STATE` from `create_app_state()` with **simulation**. There is no runtime operator toggle in the launched app; changing that requires code/env wiring beyond the default entrypoint.
+- **API path:** uses `LLMClient.from_env()` according to API configuration (operator-enabled service).
 - **Not provided:** a managed multi-tenant runtime, authenticated API gateway, or production SOC telemetry pipeline.
 
 ## Design Principles
