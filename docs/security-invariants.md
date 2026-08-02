@@ -31,18 +31,19 @@ Executable checks: `tests/test_security_invariants.py` plus the node IDs cited b
 
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
-| I-01 | Sessions are isolated per id | `ContextIsolationServer` | `tests/test_modules.py::TestIsolationServer::test_session_isolation` | cross-session | In-process only |
+| I-01 | Sessions are isolated per id | `ContextIsolationServer` | `tests/test_security_invariants.py::test_isolation_cross_session_context_not_shared` | cross-session | In-process only |
 | I-02 | Basic redaction removes common secrets | `ContentRedactor` | `tests/test_modules.py::TestIsolationServer::test_redaction` | email/API-like patterns | Pattern-based only |
 | I-03 | Expired sessions fail closed (return None) | `get_session` | `tests/test_security_invariants.py::test_isolation_expired_session_fails_closed` | expiry | Clock skew |
 | I-04 | Unknown session integrity check fails closed | `verify_context_integrity` | `tests/test_security_invariants.py::test_isolation_unknown_session_integrity_fails_closed` | missing session | — |
 | I-05 | Context length anomaly fails closed | `verify_context_integrity` | `tests/test_security_invariants.py::test_isolation_context_length_anomaly_fails_closed` | injection via length | Heuristic threshold +2 |
+| I-06 | `process_request` fails closed on bloated client context | `process_request` | `tests/test_security_invariants.py::test_isolation_process_request_fails_closed_on_bloated_context` | request-level tamper | — |
 
 ## 3. Human review / uncertainty
 
 | ID | Invariant | Code | Direct tests | Failure paths covered | Residual |
 |----|-----------|------|--------------|----------------------|----------|
-| U-01 | High uncertainty can flag human review | `EnsembleUncertaintyScorer` | `tests/test_modules.py::TestUncertaintyScorer::test_human_review_flag` | review path | Calibration not production-grade |
-| U-02 | Pipeline surfaces `needs_human_review` | `PipelineResult` | `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events` (field present on result path via other suite tests) | — | Threshold config |
+| U-01 | High uncertainty can flag human review | `EnsembleUncertaintyScorer` | `tests/test_security_invariants.py::test_human_review_flag_is_asserted_not_vacuous` | review path | Calibration not production-grade |
+| U-02 | Pipeline surfaces `needs_human_review` | `PipelineResult` | `tests/test_security_invariants.py::test_pipeline_surfaces_needs_human_review_field` | blocked or review on adversarial | Threshold config |
 
 ## 4. RAG
 
@@ -91,7 +92,7 @@ Many validators already cover malformed JSONL, missing fields, parity, digest ta
 
 - `tests/test_evaluation_contract.py::test_load_evaluation_cases_fails_closed_on_malformed_json`
 - `tests/test_eval_validator.py` missing field / malformed cases
-- `tests/test_eval_coverage_extensions.py::test_validate_then_metadata_fails_when_dataset_tampered_after_validation`
+- `tests/test_eval_integration.py::test_validate_then_metadata_fails_when_dataset_tampered_after_validation`
 
 ## 9. Residual risk ranking (pre-P2)
 
