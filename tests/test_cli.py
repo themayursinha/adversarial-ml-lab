@@ -7,11 +7,13 @@ import json
 from argparse import Namespace
 
 from src.cli import (
+    _resolve_mode,
     run_eval_command,
     run_image_attack_command,
     run_rag_command,
     run_scan_command,
 )
+from src.utils.llm_client import LLMMode
 from src.utils.logging import configure_silent
 
 
@@ -25,6 +27,19 @@ def _ns(**kwargs: object) -> Namespace:
     }
     defaults.update(kwargs)
     return Namespace(**defaults)
+
+
+def test_resolve_mode_defaults_to_simulation() -> None:
+    """No --mode must stay simulation even if ambient API keys exist."""
+    assert _resolve_mode(None) is LLMMode.SIMULATION
+    assert _resolve_mode("") is LLMMode.SIMULATION
+    assert _resolve_mode("simulation") is LLMMode.SIMULATION
+    assert _resolve_mode("openai") is LLMMode.OPENAI
+
+
+def test_resolve_mode_auto_means_env_detect() -> None:
+    """Explicit --mode auto opts into from_env auto-detection."""
+    assert _resolve_mode("auto") is None
 
 
 def test_run_scan_command_emits_json(capsys, tmp_path, monkeypatch) -> None:

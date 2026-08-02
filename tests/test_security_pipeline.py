@@ -55,8 +55,25 @@ def test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization(
         stage_order.append("canonicalize")
         return original_canon(text)
 
+    from src.defenses.context_filter import ContextAwareFilter
+    from src.defenses.uncertainty_scorer import EnsembleUncertaintyScorer
+
+    original_filter = ContextAwareFilter.filter_output
+
+    def tracked_filter(self: ContextAwareFilter, *args, **kwargs):
+        stage_order.append("filter")
+        return original_filter(self, *args, **kwargs)
+
+    original_uncertainty = EnsembleUncertaintyScorer.score
+
+    def tracked_uncertainty(self: EnsembleUncertaintyScorer, *args, **kwargs):
+        stage_order.append("uncertainty")
+        return original_uncertainty(self, *args, **kwargs)
+
     monkeypatch.setattr(TextAnomalyScorer, "score", tracked_score)
     monkeypatch.setattr(dp_mod, "canonicalize_text", tracked_canon)
+    monkeypatch.setattr(ContextAwareFilter, "filter_output", tracked_filter)
+    monkeypatch.setattr(EnsembleUncertaintyScorer, "score", tracked_uncertainty)
 
     pipeline = DefensePipeline()
     raw_input = "summarize quarterly\u200b metrics"
@@ -66,8 +83,13 @@ def test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization(
         expected_task="summarize",
     )
 
-    assert "anomaly" in stage_order and "canonicalize" in stage_order
+    assert stage_order[0] == "anomaly"
+    assert "canonicalize" in stage_order
+    assert "filter" in stage_order
+    assert "uncertainty" in stage_order
     assert stage_order.index("anomaly") < stage_order.index("canonicalize")
+    assert stage_order.index("canonicalize") < stage_order.index("filter")
+    assert stage_order.index("filter") < stage_order.index("uncertainty")
     assert "\u200b" in anomaly_inputs[0]
 
 

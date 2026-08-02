@@ -10,7 +10,7 @@ Completed in this line:
 - Service-layer defense pipeline (anomaly → canonicalization → filter → uncertainty) and RAG defense hook
 - CLI workflows: `scan`, `eval`, `serve`, `api`, `fuzz`, `rag`, `plugin`, `config`, optional `image-attack`
 - Packaged baseline evaluation dataset (50 cases) for installed CLI and API smoke tests
-- RAG poisoning simulation and defense laboratory (in-memory vector store; `[rag]` extra for embeddings)
+- RAG poisoning simulation and defense laboratory (filesystem-backed local vector store under `./data/chroma` by default; `[rag]` extra for embeddings)
 - Optional FastAPI surface and compose `api` service (operator-enabled, not default Gradio container)
 - Automated red-team `fuzz` command over attack families
 - Heuristic `TextAnomalyScorer` and optional `ConstitutionalReviewer` module (reviewer not wired into default pipeline)

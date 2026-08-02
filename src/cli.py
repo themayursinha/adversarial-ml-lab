@@ -21,17 +21,23 @@ from src.utils.llm_client import LLMClient, LLMMode
 from src.utils.logging import configure_logging, configure_silent
 
 
-def _resolve_mode(mode_arg: str | None) -> LLMMode:
-    """Resolve the LLM mode from CLI argument or environment auto-detection."""
-    if mode_arg:
-        return LLMMode(mode_arg)
-    return LLMMode.SIMULATION
+def _resolve_mode(mode_arg: str | None) -> LLMMode | None:
+    """Resolve CLI mode for ``LLMClient.from_env``.
+
+    - omitted / default → simulation (privacy-safe; no ambient-key disclosure)
+    - ``auto`` → ``None`` so ``from_env`` auto-selects Anthropic/OpenAI/Ollama from env
+    - explicit backend name → that ``LLMMode``
+    """
+    if mode_arg is None or mode_arg == "":
+        return LLMMode.SIMULATION
+    if mode_arg == "auto":
+        return None
+    return LLMMode(mode_arg)
 
 
 def _resolve_mode_or_none(mode_arg: str | None) -> LLMMode | None:
-    if mode_arg:
-        return LLMMode(mode_arg)
-    return None
+    """Alias kept for call sites that already use the optional-mode name."""
+    return _resolve_mode(mode_arg)
 
 
 def _tracking_setup(args: argparse.Namespace, name: str, tags: list[str] | None = None) -> None:
@@ -199,8 +205,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan_parser.add_argument(
         "--mode",
-        choices=["simulation", "openai", "anthropic", "ollama"],
-        help="LLM backend mode (default: simulation).",
+        choices=["simulation", "auto", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: simulation). Use 'auto' to select from env keys/host.",
     )
     scan_parser.add_argument(
         "--log-level",
@@ -408,8 +414,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fuzz_parser.add_argument(
         "--mode",
-        choices=["simulation", "openai", "anthropic", "ollama"],
-        help="LLM backend mode (default: auto-detect).",
+        choices=["simulation", "auto", "openai", "anthropic", "ollama"],
+        help="LLM backend mode (default: simulation). Use 'auto' to select from env keys/host.",
     )
     fuzz_parser.add_argument(
         "--target-url",
@@ -609,7 +615,7 @@ def run_fuzz_command(args: argparse.Namespace) -> int:
         fuzzer = RemoteFuzzer(target_url=args.target_url)
     else:
         mode = _resolve_mode(args.mode)
-        client = LLMClient.from_env(mode=mode) if mode else LLMClient.from_env()
+        client = LLMClient.from_env(mode=mode)
         fuzzer = RedTeamFuzzer(llm_client=client)
 
     report = fuzzer.fuzz(target=content, families=families, task_type=args.task)
