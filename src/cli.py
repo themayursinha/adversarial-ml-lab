@@ -21,17 +21,21 @@ from src.utils.llm_client import LLMClient, LLMMode
 from src.utils.logging import configure_logging, configure_silent
 
 
-def _resolve_mode(mode_arg: str | None) -> LLMMode:
-    """Resolve the LLM mode from CLI argument or environment auto-detection."""
-    if mode_arg:
-        return LLMMode(mode_arg)
-    return LLMMode.SIMULATION
+def _resolve_mode(mode_arg: str | None) -> LLMMode | None:
+    """Resolve an explicit CLI mode, or None for environment auto-detection.
 
-
-def _resolve_mode_or_none(mode_arg: str | None) -> LLMMode | None:
+    When ``mode_arg`` is omitted, callers must pass ``None`` into
+    ``LLMClient.from_env`` so Anthropic/OpenAI/Ollama env vars can select a
+    live backend. There is no silent force-to-simulation on the no-mode path.
+    """
     if mode_arg:
         return LLMMode(mode_arg)
     return None
+
+
+def _resolve_mode_or_none(mode_arg: str | None) -> LLMMode | None:
+    """Alias kept for call sites that already use the optional-mode name."""
+    return _resolve_mode(mode_arg)
 
 
 def _tracking_setup(args: argparse.Namespace, name: str, tags: list[str] | None = None) -> None:
@@ -609,7 +613,7 @@ def run_fuzz_command(args: argparse.Namespace) -> int:
         fuzzer = RemoteFuzzer(target_url=args.target_url)
     else:
         mode = _resolve_mode(args.mode)
-        client = LLMClient.from_env(mode=mode) if mode else LLMClient.from_env()
+        client = LLMClient.from_env(mode=mode)
         fuzzer = RedTeamFuzzer(llm_client=client)
 
     report = fuzzer.fuzz(target=content, families=families, task_type=args.task)

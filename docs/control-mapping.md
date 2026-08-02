@@ -29,7 +29,7 @@ Names follow the [2025 OWASP GenAI LLM Top 10](https://genai.owasp.org/llm-top-1
 
 | Topic | Implementation | Tests |
 |-------|----------------|-------|
-| Pipeline stage order | Anomaly (raw input) → canonicalize → filter → uncertainty | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` |
+| Pipeline stage order | Anomaly (raw input) → canonicalize → filter → uncertainty | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` (full four-stage order) |
 | Canonicalization | `canonicalize_text` | `tests/test_security_pipeline.py::test_canonicalize_text_removes_zero_width` |
 | Context tampering demos | `ContextTamperingAttack` | `tests/test_modules.py` |
 | Inference evasion demos | `InferenceEvasionAttack` | `tests/test_modules.py` |

@@ -13,7 +13,7 @@ from src.defenses.context_filter import ContextAwareFilter
 from src.defenses.isolation_server import ContextIsolationServer, IsolationLevel, RedactionLevel
 from src.defenses.uncertainty_scorer import EnsembleUncertaintyScorer
 from src.services.defense_pipeline import DefensePipeline
-from src.utils.llm_client import LLMClient
+from src.utils.llm_client import LLMClient, LLMMode
 
 
 @dataclass
@@ -32,15 +32,23 @@ class AppState:
     config: AppConfig
 
 
-def create_app_state(config: AppConfig | None = None) -> AppState:
+def create_app_state(
+    config: AppConfig | None = None,
+    *,
+    llm_mode: LLMMode | None = LLMMode.SIMULATION,
+) -> AppState:
     """Build app dependencies from configuration.
 
-    Auto-detects the best available LLM backend from environment variables.
-    Falls back to simulation mode if no API keys are configured.
+    The Gradio web UI defaults to **simulation** so uploaded content stays local
+    unless an operator explicitly constructs state with ``llm_mode=None``
+    (environment auto-detect) or another backend mode.
     """
     cfg = config or get_default_config()
 
-    llm_client = LLMClient.from_env()
+    if llm_mode is None:
+        llm_client = LLMClient.from_env()
+    else:
+        llm_client = LLMClient(mode=llm_mode)
     context_filter = ContextAwareFilter(
         sensitivity=cfg.defense.context_filter.sensitivity,
         block_on_detection=cfg.defense.context_filter.block_on_detection,

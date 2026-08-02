@@ -7,9 +7,10 @@ This document ties public architecture, threat-model, and control-mapping statem
 | Claim | Code truth | Tests |
 |-------|------------|-------|
 | `LLMClient()` defaults to simulation | `LLMClient(mode=LLMMode.SIMULATION)`; `SimulatedLLM` in `src/utils/llm_client.py` | `tests/test_doc_claims.py::test_llm_client_defaults_to_simulation_mode` |
-| CLI/API use `LLMClient.from_env()` and auto-select live backends when env keys/host are set | `from_env` prefers Anthropic → OpenAI → Ollama when vars present; otherwise simulation | `tests/test_modules.py::TestLLMClient::test_from_env_auto_detects_openai`, `test_from_env_falls_back_to_simulation` |
+| CLI/API use `LLMClient.from_env()` and auto-select live backends when env keys/host are set | `from_env` prefers Anthropic → OpenAI → Ollama when vars present; otherwise simulation. CLI no-`--mode` path passes `mode=None` into `from_env` via `_resolve_mode` | `tests/test_modules.py::TestLLMClient::test_from_env_auto_detects_openai`, `tests/test_modules.py::TestLLMClient::test_from_env_falls_back_to_simulation`, `tests/test_cli.py::test_resolve_mode_none_means_env_auto_detect` |
 | Explicit `--mode` / constructor mode overrides auto-detect | `LLMClient.from_env(mode=...)` and CLI `--mode` | `tests/test_modules.py::TestLLMClient::test_from_env_explicit_mode_overrides` |
 | `adml scan` reports simulation when env is empty | `run_scan_command` uses `from_env` | `tests/test_cli.py::test_run_scan_command_emits_json` (clears backend env via `monkeypatch`) |
+| Gradio web defaults to local simulation (privacy note) | `create_app_state(llm_mode=LLMMode.SIMULATION)` in `src/web/state.py` | `tests/test_web_state.py::test_create_app_state_defaults_to_simulation_even_if_openai_key_set` |
 | Gradio demo is the default container entrypoint | `Dockerfile` `ENTRYPOINT ["python", "app.py"]` | `tests/test_doc_claims.py::test_dockerfile_default_entrypoint_runs_gradio_app` |
 | FastAPI is opt-in (`adml api` / compose `api` service) | `src/api/server.py`; compose overrides image entrypoint | `tests/test_api.py::test_health_endpoint`, `tests/test_doc_claims.py::test_compose_api_overrides_entrypoint_and_simulation_first_env` |
 | Not production multi-tenant isolation | In-process session store only; no authn/z on API | — (documented limitation) |
@@ -19,7 +20,7 @@ This document ties public architecture, threat-model, and control-mapping statem
 | Claim | Code truth | Tests |
 |-------|------------|-------|
 | Untrusted input via web or CLI | `src/web/controllers.py`, `src/cli.py` `scan`/`fuzz` | `tests/test_cli.py` |
-| Output path: anomaly on **raw** input, then canonicalization, then filter and uncertainty | `DefensePipeline.analyze_output` order in `src/services/defense_pipeline.py` | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` |
+| Output path: anomaly on **raw** input, then canonicalization, then filter and uncertainty | `DefensePipeline.analyze_output` order in `src/services/defense_pipeline.py` | `tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization` (asserts full stage order) |
 | Canonicalization utility | `canonicalize_text` in `src/services/canonicalization.py` | `tests/test_security_pipeline.py::test_canonicalize_text_removes_zero_width` |
 | Structured security events | `src/domain/security_events.py`, `PipelineResult.events` | `tests/test_security_pipeline.py::test_defense_pipeline_emits_detection_events` |
 | RAG retrieved-chunk defense | `DefensePipeline.analyze_rag_context` → `RagPoisoningDefense` | `tests/test_security_pipeline.py::test_defense_pipeline_analyze_rag_context_flags_poisoned_chunk` |

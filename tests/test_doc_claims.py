@@ -66,7 +66,7 @@ CONTROL_SYMBOL_CLAIMS: list[tuple[str, str, str, str]] = [
         "tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization",
     ),
     (
-        "Pipeline stage order (anomaly before canonicalize)",
+        "Pipeline stage order (anomaly → canonicalize → filter → uncertainty)",
         "src.services.defense_pipeline",
         "DefensePipeline",
         "tests/test_security_pipeline.py::test_defense_pipeline_scores_anomaly_on_raw_input_before_canonicalization",
