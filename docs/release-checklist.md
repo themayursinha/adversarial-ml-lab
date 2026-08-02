@@ -27,6 +27,7 @@ docker run --rm --entrypoint python adversarial-ml-lab -m src.cli --help
 - installed wheel smoke test succeeds through `make release-check`
 - security docs still reflect actual project behavior and limitations
 - [security-invariants.md](security-invariants.md) residual risks reviewed before marketing claims
+- [p1-gate-decision-2026-08-02.md](p1-gate-decision-2026-08-02.md) conditional GO for P2 when still current
 - no broken links or stale repo coordinates remain in docs or metadata
 
 ## 4. Tag and Publish
