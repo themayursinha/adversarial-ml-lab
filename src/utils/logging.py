@@ -75,15 +75,17 @@ def configure_logging(
     )
 
 
+# Keep a process-long handle so GC cannot close the silent sink mid-suite.
+_SILENT_SINK = open(os.devnull, "w")  # noqa: SIM115
+
+
 def configure_silent() -> None:
     """Suppress all log output for test environments."""
     structlog.reset_defaults()
     structlog.configure(
         processors=[_stderr_renderer],
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(
-            file=open(os.devnull, "w"),  # noqa: SIM115
-        ),
+        logger_factory=structlog.PrintLoggerFactory(file=_SILENT_SINK),
         wrapper_class=structlog.BoundLogger,
         cache_logger_on_first_use=False,
     )

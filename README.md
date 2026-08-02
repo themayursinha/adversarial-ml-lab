@@ -75,6 +75,7 @@ venv/bin/python -m pip install ".[tracking]"
 - [Architecture](docs/architecture.md)
 - [Threat Model](docs/threat-model.md)
 - [Control Mapping](docs/control-mapping.md)
+- [Security invariants & failure-path map](docs/security-invariants.md)
 - [Claim-to-Code Map](docs/claim-map.md)
 - [Evaluation Methodology](docs/evaluation-methodology.md)
 - [Deployment Hardening](docs/deployment-hardening.md)

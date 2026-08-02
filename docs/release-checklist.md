@@ -26,6 +26,7 @@ docker run --rm --entrypoint python adversarial-ml-lab -m src.cli --help
 - `venv/bin/python -m src.cli eval --suite baseline` succeeds from the repo checkout
 - installed wheel smoke test succeeds through `make release-check`
 - security docs still reflect actual project behavior and limitations
+- [security-invariants.md](security-invariants.md) residual risks reviewed before marketing claims
 - no broken links or stale repo coordinates remain in docs or metadata
 
 ## 4. Tag and Publish

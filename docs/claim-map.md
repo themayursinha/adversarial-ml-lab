@@ -2,6 +2,8 @@
 
 This document ties public architecture, threat-model, and control-mapping statements to **live modules** and **named tests**. The hard-coded contract matrix in `tests/test_doc_claims.py::CONTROL_SYMBOL_CLAIMS` checks that each listed symbol imports and that each cited pytest node id exists; it does **not** parse this markdown file or prove that a test exercises every claim. Use **gap** / **partial** labels below when no direct test exists.
 
+**P1 companion:** [security-invariants.md](security-invariants.md) maps security-critical paths, failure modes, residual risks, and direct pytest nodes (including `tests/test_security_invariants.py`).
+
 ## Simulation-first boundaries
 
 | Claim | Code truth | Tests |
