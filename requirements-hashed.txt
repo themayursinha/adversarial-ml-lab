@@ -297,9 +297,9 @@ httpx==0.28.1 \
     #   huggingface-hub
     #   openai
     #   safehttpx
-huggingface-hub==1.23.0 \
-    --hash=sha256:b1d604788f5adc7f0eb246e03e0ec19011ca06e38400218c347dccc3dffa64a2 \
-    --hash=sha256:c04997fb8bbdace1e57b7703d30ed7678af51f70d00d241819ff411b92ae9a88
+huggingface-hub==1.27.0 \
+    --hash=sha256:7df6827c2f956c60fbaa64646e979e566db76f619dd0a9729dfb8c5a3eb4f68d \
+    --hash=sha256:c1fed40ea82a6b41b477f5243546549b792ae0a93abcea608cff66089bf8f8df
     # via
     #   gradio
     #   gradio-client
