@@ -245,6 +245,14 @@ groovy==0.1.2 \
     --hash=sha256:25c1dc09b3f9d7e292458aa762c6beb96ea037071bf5e917fc81fb78d2231083 \
     --hash=sha256:7f7975bab18c729a257a8b1ae9dcd70b7cafb1720481beae47719af57c35fa64
     # via gradio
+httpcore2==2.12.0 \
+    --hash=sha256:7e04258ce01013d7d615e5b910a3b27fac937d7a95038227e79652b4ba3b4ceb \
+    --hash=sha256:9293522bba0aa7c4c8e9e3f040c16575bd8868e155a77fa30c7a9085a5eae648
+    # via httpx2
+httpx2==2.12.0 \
+    --hash=sha256:7631fe9887a8a2275f4a2540e053aa670fcc50742864a9ae7c66e609fdcf12cf \
+    --hash=sha256:cc8b6eecb8661c146b8f89a60e97456ee086e91a784ed31ac450c3a9e613dd36
+    # via openai
 h11==0.16.0 \
     --hash=sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1 \
     --hash=sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86
@@ -582,9 +590,9 @@ omegaconf==2.3.1 \
     # via
     #   -r requirements.txt
     #   hydra-core
-openai==2.46.0 \
-    --hash=sha256:0421e0735ac41451cad894af4cddf0435bfbf8cbc538ac0e15b3c062f2ddc06a \
-    --hash=sha256:672381db55efb3a1e2610f29304c130cccdd0b319bace4d492b2443cb64c1e7c
+openai==3.3.0 \
+    --hash=sha256:28f904a9fbff15288e9dd67bc0f7020d4f576d37786383a480db02fe5d8139d3 \
+    --hash=sha256:ded6b2112e6d299c7a2573ff6f165dc92fb64ceaa4d7daa42345f091157bd373
     # via -r requirements.txt
 opentelemetry-api==1.44.0 \
     --hash=sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a \
@@ -1330,6 +1338,10 @@ structlog==26.1.0 \
     --hash=sha256:e081a26d6c373e6d201eca24eede26d8ffab07f88f477822e679183428d3d91e \
     --hash=sha256:f63a716cbd1b1291cf7661de7794b455acfa4c43c5bcf1630e6ad5ddc1adb3b7
     # via -r requirements.txt
+truststore==0.10.4 \
+    --hash=sha256:9d91bd436463ad5e4ee4aba766628dd6cd7010cf3e2461756b3303710eebc301 \
+    --hash=sha256:adaeaecf1cbb5f4de3b1959b42d41f6fab57b2b1666adb59e89cb0b53361d981
+    # via httpcore2
 tomlkit==0.14.0 \
     --hash=sha256:592064ed85b40fa213469f81ac584f67a4f2992509a7c3ea2d632208623a3680 \
     --hash=sha256:cf00efca415dbd57575befb1f6634c4f42d2d87dbba376128adb42c121b87064
