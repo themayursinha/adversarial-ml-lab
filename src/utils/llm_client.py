@@ -10,6 +10,7 @@ never hardcoded, logged, or embedded in responses.
 
 from __future__ import annotations
 
+import inspect
 import os
 import re
 import time
@@ -420,14 +421,19 @@ class AnthropicLLM:
 
         start = time.monotonic()
 
+        request_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_content}],
+            "max_tokens": self.max_tokens,
+        }
+        # temperature was removed from Messages.create in anthropic >= 1.0.0;
+        # omit it on new SDKs so the type check stays clean.
+        if "temperature" in inspect.signature(self._client.messages.create).parameters:
+            request_kwargs["temperature"] = self.temperature
+
         try:
-            response = self._client.messages.create(
-                model=self.model,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_content}],
-                temperature=self.temperature,
-                max_tokens=self.max_tokens,
-            )
+            response = self._client.messages.create(**request_kwargs)
         except Exception:
             log.exception("anthropic.request_failed", model=self.model, task_type=task_type)
             raise
