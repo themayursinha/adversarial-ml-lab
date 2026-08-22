@@ -13,4 +13,4 @@ pytest-cov>=4.1.0
 ruff>=0.16.3
 setuptools>=69
 twine>=5.1.1
-wheel>=0.43.0
+wheel>=0.48.0
