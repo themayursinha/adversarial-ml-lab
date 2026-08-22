@@ -14,6 +14,11 @@ updates:
       # bumps always fail container-smoke (ResolutionImpossible).
       - dependency-name: "tomlkit"
         versions: [">=0.15.0"]
+      # pydantic 2.13.4 pins pydantic-core==2.46.4; isolated pydantic-core
+      # bumps always fail container-smoke (ResolutionImpossible). pydantic-core
+      # is an implementation detail of pydantic — bump it via pydantic only.
+      - dependency-name: "pydantic-core"
+        versions: ["*"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
