@@ -10,6 +10,10 @@ updates:
       # isolated antlr4 4.13+ bumps always fail container-smoke.
       - dependency-name: "antlr4-python3-runtime"
         versions: [">=4.10"]
+      # gradio 6.16.0 pins tomlkit>=0.12.0,<0.15.0; isolated 0.15+
+      # bumps always fail container-smoke (ResolutionImpossible).
+      - dependency-name: "tomlkit"
+        versions: [">=0.15.0"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
