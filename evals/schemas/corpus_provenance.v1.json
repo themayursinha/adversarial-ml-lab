@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-ml-lab.local/schemas/corpus_provenance.v1.json",
+  "title": "Adversarial ML Lab corpus provenance sidecar (v1)",
+  "description": "Sidecar provenance document for a governed evaluation dataset. Fail-closed: unknown properties reject validation. The evaluation row schema stays frozen (evaluation_case.v1); provenance lives beside the dataset, never inside rows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "corpus_id",
+    "corpus_version",
+    "contract_ref",
+    "schema_ref",
+    "split_rule",
+    "held_out_percent",
+    "created_utc",
+    "generated_by",
+    "license_status",
+    "sanitization_policy",
+    "families",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Provenance sidecar schema version."
+    },
+    "corpus_id": {
+      "type": "string",
+      "pattern": "^adml\\.evaluation\\.corpus\\.[a-z0-9_]+$",
+      "description": "Stable identifier for the corpus revision, e.g. adml.evaluation.corpus.baseline_v2."
+    },
+    "corpus_version": {
+      "type": "string",
+      "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Corpus revision this sidecar documents (semver, optional leading v)."
+    },
+    "contract_ref": {
+      "const": "adml.evaluation.dataset.v1",
+      "description": "Dataset contract the governed rows conform to."
+    },
+    "schema_ref": {
+      "const": "evaluation_case.v1",
+      "description": "Row schema reference; provenance must never widen the frozen row schema."
+    },
+    "split_rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deterministic held-out assignment rule string; must be reproducible from case_id alone."
+    },
+    "held_out_percent": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Target percentage of the corpus assigned to the held-out split by split_rule."
+    },
+    "created_utc": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO 8601 UTC revision timestamp for when this corpus revision was cut."
+    },
+    "generated_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Script or process that produced this sidecar."
+    },
+    "generator_digest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the generator script bytes at generation time, when applicable."
+    },
+    "parent_corpus": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["corpus_id", "case_count", "content_digest_sha256"],
+      "properties": {
+        "corpus_id": { "type": "string", "minLength": 1 },
+        "case_count": { "type": "integer", "minimum": 1 },
+        "content_digest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "description": "Corpus this revision was derived from, when applicable."
+    },
+    "license_status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Corpus-level license statement (all cases must be compatible)."
+    },
+    "sanitization_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secrets", "pii", "live_targets", "legacy_notes"],
+      "properties": {
+        "secrets": { "type": "string", "minLength": 1 },
+        "pii": { "type": "string", "minLength": 1 },
+        "live_targets": { "type": "string", "minLength": 1 },
+        "legacy_notes": { "type": "string", "minLength": 1 }
+      },
+      "description": "Human-readable sanitization policy applied to this corpus revision."
+    },
+    "families": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "type": "string", "minLength": 1 },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["case_count", "benign_hard_negatives", "held_out_count", "generation_methods"],
+        "properties": {
+          "case_count": { "type": "integer", "minimum": 1 },
+          "benign_hard_negatives": { "type": "integer", "minimum": 0 },
+          "held_out_count": { "type": "integer", "minimum": 0 },
+          "generation_methods": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "integer", "minimum": 0 }
+          }
+        }
+      },
+      "description": "Per-family composition summary (must match dataset family_counts)."
+    },
+    "cases": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9_]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "source",
+          "generation_method",
+          "generated_by",
+          "seed",
+          "attack_class",
+          "secondary_tags",
+          "target_model",
+          "parent_sample_id",
+          "content_hash_sha256",
+          "normalized_hash_sha256",
+          "scrub_status",
+          "review_status",
+          "reviewer",
+          "held_out",
+          "derivation_note"
+        ],
+        "properties": {
+          "schema_version": { "const": "1.0.0" },
+          "source": {
+            "enum": [
+              "human",
+              "red_team",
+              "synthetic",
+              "dataset_import",
+              "fuzzing",
+              "bug_bounty",
+              "model_assisted_review",
+              "derived"
+            ]
+          },
+          "generation_method": {
+            "enum": ["manual", "template_mutation", "fuzzing", "encoding", "paraphrase", "import"]
+          },
+          "generated_by": { "type": "string", "minLength": 1 },
+          "seed": { "type": ["integer", "string", "null"] },
+          "attack_class": { "type": "string", "minLength": 1 },
+          "secondary_tags": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "target_model": { "type": "string", "minLength": 1 },
+          "parent_sample_id": { "type": ["string", "null"] },
+          "content_hash_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "normalized_hash_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "scrub_status": {
+            "enum": ["pending", "cleaned", "rejected_for_secrets", "not_required"]
+          },
+          "review_status": {
+            "enum": ["draft", "in_review", "approved", "rejected", "needs_revision"]
+          },
+          "reviewer": { "type": ["string", "null"] },
+          "held_out": { "type": "boolean" },
+          "derivation_note": { "type": "string" }
+        }
+      },
+      "description": "Per-case provenance keyed by case_id; one entry for every dataset row."
+    }
+  }
+}
