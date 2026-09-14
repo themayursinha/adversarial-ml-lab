@@ -1,7 +1,7 @@
 # Regression gate report
 
 - pipeline: `regression_gate_v1`
-- dataset: `baseline_v2.jsonl` (digest `a8ab506df82c…`)
+- dataset: `baseline_v2.jsonl` (digest `3fdacd14e985…`)
 - policy: `adml.regression.thresholds.baseline_v2` v1.0.0
 - case count: 204
 - gate decision: **PASS**

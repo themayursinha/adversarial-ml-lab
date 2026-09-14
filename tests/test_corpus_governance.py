@@ -16,6 +16,7 @@ from src.eval.contract import (
 from src.eval.corpus_governance import (
     CORPUS_HELD_OUT_PERCENT,
     CORPUS_SPLIT_RULE,
+    REPORT_ALLOWED_CHECKS,
     CorpusGovernanceError,
     assert_governance_report_passes,
     build_governance_report,
@@ -174,6 +175,100 @@ def test_scan_finds_placeholder_secrets_failing() -> None:
     assert scan_case_text(f"use password={fake_password} to sign in")
     assert scan_case_text("send results to https://collector.evil-host.org/x")
     assert not scan_case_text("The value EXAMPLE_TOKEN is a placeholder.")
+
+
+def _credential_string(keyword: str, separator: str, value: str, quote: str = "") -> str:
+    """Assemble a credential-shaped fixture at runtime.
+
+    Source contains only fragments, so secret scanners never see a complete
+    literal assignment while the runtime input stays realistic.
+    """
+    return f"{keyword}{separator}{quote}{value}{quote}"
+
+
+def test_scan_rejects_unquoted_credential_assignments() -> None:
+    """Quoted and unquoted credential assignments both fail intake."""
+    assert "secret:assigned_credential" in scan_case_text(_credential_string("password", "=", "abcdefgh"))
+    assert "secret:assigned_credential" in scan_case_text(_credential_string("api_key", ": ", "abcdefghijklmno"))
+    assert "secret:assigned_credential" in scan_case_text(
+        "set " + _credential_string("secret", "=", "hunter2hunter2", quote="'")
+    )
+    # Documented placeholders are exempt.
+    assert not scan_case_text("token='EXAMPLE_TOKEN'")
+    assert not scan_case_text("Use the placeholder SAMPLE_API_KEY in your example.")
+
+
+def test_scan_rejects_local_network_and_suffix_tricks() -> None:
+    """mDNS names, and lookalike domains that merely contain reserved words, fail."""
+    assert "live_target:url" in scan_case_text("see http://printer.local/status")
+    assert "live_target:fqdn" in scan_case_text("reach the collector at collector.exampleevil.com")
+    assert "live_target:fqdn" in scan_case_text("target host target.testbank.com now")
+    # Flagged via the URL path (label differs, outcome identical).
+    assert scan_case_text("fetch https://evil.localbank.com/x")
+
+
+def test_scan_normalizes_unicode_hostnames_through_idna() -> None:
+    """Homoglyph registrable labels are flagged; reserved-TLD confusables pass."""
+    cyrillic_host = "support.exampl\u0435.com"
+    assert "live_target:fqdn" in scan_case_text(f"sign in at {cyrillic_host}")
+    assert not scan_case_text("sign in at support.exampl\u0435.invalid")
+    assert not scan_case_text("docs at https://docs.example.org/guide")
+
+
+def test_held_out_split_known_vectors() -> None:
+    """Independent known vectors pin the published sha256(case_id)mod100<25 rule."""
+    assert is_held_out("clean_chat_support") is False  # bucket 61
+    assert is_held_out("evasion_rot13_override") is True  # bucket 8
+    assert is_held_out("manyshot_edge_single_shot") is False  # bucket 77
+
+
+def test_governance_report_rejects_tampered_sidecar(tmp_path: Path, sidecar: dict) -> None:
+    """A corrupted sidecar must fail the report build, not be attested as passing."""
+    tampered = json.loads(json.dumps(sidecar))
+    first_id = next(iter(tampered["cases"]))
+    tampered["cases"][first_id]["content_hash_sha256"] = "1" * 64
+    tampered_path = tmp_path / "tampered.provenance.json"
+    tampered_path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(CorpusGovernanceError, match="content hash mismatch"):
+        build_governance_report(V2_JSONL, tampered, manifest_path=V2_MANIFEST)
+
+
+def test_governance_report_requires_complete_check_set() -> None:
+    """Omitting any check must fail the gate; partial reports cannot pass."""
+    with pytest.raises(CorpusGovernanceError, match="check set mismatch"):
+        assert_governance_report_passes({"checks": {"dedupe": "pass"}})
+    complete_failing = {name: "pass" for name in REPORT_ALLOWED_CHECKS}
+    complete_failing["leakage_scan"] = "fail"
+    with pytest.raises(CorpusGovernanceError, match="did not pass"):
+        assert_governance_report_passes({"checks": complete_failing})
+
+
+def test_generator_double_run_is_byte_identical(tmp_path: Path) -> None:
+    """Running the generator twice into isolated roots must match byte-for-byte."""
+    import subprocess
+    import sys
+
+    script = REPO_ROOT / "scripts/expand_corpus_v2.py"
+    env_roots = [tmp_path / "run_one", tmp_path / "run_two"]
+    for root in env_roots:
+        result = subprocess.run(
+            [sys.executable, str(script), "--out-root", str(root)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0, result.stderr
+    artifact_names = [
+        "evals/datasets/baseline_v2.jsonl",
+        "evals/datasets/baseline_v2.manifest.json",
+        "evals/datasets/baseline_v2.provenance.json",
+        "evals/examples/baseline_v2_governance_report.json",
+        "evals/examples/baseline_v2_simulation_snapshot.json",
+    ]
+    for name in artifact_names:
+        one = (env_roots[0] / name).read_bytes()
+        two = (env_roots[1] / name).read_bytes()
+        assert one == two, f"nondeterministic artifact: {name}"
 
 
 def test_every_family_has_hard_negatives_and_edge_cases(sidecar: dict) -> None:

@@ -67,7 +67,7 @@ divergence all reject the sidecar (`verify_provenance_sidecar`).
 Membership is a pure function of the case id:
 
 ```
-heldout-v1:sha256(case_id)mod100<25   (25% target, ~45 cases)
+sha256(case_id)mod100<25   (25% target; 57 of 204 cases in v2.0)
 ```
 
 Discipline: defense tuning (thresholds, filters, scorers) may use only the
@@ -84,7 +84,10 @@ New-case intake rules (enforced by `scan_case_text` and the generator):
 - No PII; email/ID/phone-shaped patterns are rejected except
   example-namespace hosts.
 - No live targets: only `example.com/org/net/edu`, `*.example`, `*.invalid`,
-  `*.test`, `*.local` hosts are allowed.
+  `*.test` hosts are allowed (no `.local` mDNS names). Hostname candidates are
+  IDNA-normalized before allowlist checks, so homoglyph lookalikes of
+  registrable domains fail intake; confusable fixtures live only under
+  reserved TLDs such as `.invalid`.
 - Attacks are instruction-override style; no operational exploit content.
 
 Legacy v1 rows are retained byte-stable and documented in the sidecar

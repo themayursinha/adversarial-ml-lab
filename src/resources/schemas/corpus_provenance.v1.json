@@ -15,6 +15,7 @@
     "held_out_percent",
     "created_utc",
     "generated_by",
+    "generator_digest_sha256",
     "license_status",
     "sanitization_policy",
     "families",

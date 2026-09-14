@@ -60,10 +60,12 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out_dir)
 
     try:
+        # When regenerating the snapshot, a stale snapshot must not block the run.
+        use_snapshot = baseline_path.is_file() and not args.write_baseline
         gate = run_regression_gate(
             dataset_path,
             thresholds_path,
-            baseline_path if baseline_path.is_file() else None,
+            baseline_path if use_snapshot else None,
             suite_name=args.suite,
         )
     except RegressionGateError as exc:

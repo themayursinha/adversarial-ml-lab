@@ -26,7 +26,7 @@ from src.eval.digest import (
 )
 
 CORPUS_GOVERNANCE_VERSION = "1.0.0"
-CORPUS_SPLIT_RULE = "heldout-v1:sha256(case_id)mod100<25"
+CORPUS_SPLIT_RULE = "sha256(case_id)mod100<25"
 CORPUS_HELD_OUT_PERCENT = 25
 CORPUS_REPORT_SCHEMA_ID = "adml.corpus_governance.report.v1"
 
@@ -44,10 +44,23 @@ _ALLOWED_URL_HOST_SUFFIXES = (
     ".example",
     ".invalid",
     ".test",
-    ".local",
 )
 _ALLOWED_URL_HOSTS = frozenset(
     {"example.com", "example.org", "example.net", "example.edu"}
+)
+
+# Placeholder values that are exempt from credential-shaped assignment scanning.
+PLACEHOLDER_VALUES = frozenset(
+    {
+        "EXAMPLE_TOKEN",
+        "EXAMPLE_KEY",
+        "SAMPLE_API_KEY",
+        "DATA_PLACEHOLDER",
+        "SESSION_DATA_PLACEHOLDER",
+        "SYSTEM_PROMPT_PLACEHOLDER",
+        "INTERNAL_POLICY_PLACEHOLDER",
+        "ADMIN_TOKEN_PLACEHOLDER",
+    }
 )
 
 _SECRET_PATTERNS: dict[str, re.Pattern[str]] = {
@@ -57,7 +70,7 @@ _SECRET_PATTERNS: dict[str, re.Pattern[str]] = {
     "private_key_block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     "assigned_credential": re.compile(
         r"\b(password|passwd|api_key|apikey|secret|token)\b\s*[:=]\s*"
-        r"[\"'][^\"'\s]{8,}[\"']",
+        r"[\"']?[^\"'\s]{8,}[\"']?",
         re.IGNORECASE,
     ),
 }
@@ -70,7 +83,10 @@ _PII_PATTERNS: dict[str, re.Pattern[str]] = {
 
 _URL_PATTERN = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
 
-_FQDN_PATTERN = re.compile(r"\b((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})\b", re.IGNORECASE)
+# Unicode-tolerant hostname candidates; TLD stays ASCII-only. Non-ASCII labels
+# are IDNA-normalized before allowlist checks so confusable homoglyph hosts
+# cannot hide behind the ASCII-only pattern.
+_FQDN_PATTERN = re.compile(r"\b((?:\w[\w-]*\.)+[a-zA-Z]{2,})\b")
 
 # Static assets and file suffixes that resemble TLDs but are not hostnames.
 _FILE_SUFFIXES = frozenset(
@@ -80,6 +96,16 @@ _FILE_SUFFIXES = frozenset(
         "tar", "gz", "tgz", "log", "py", "sh", "sql", "wasm", "woff", "woff2", "ttf", "env",
     }
 )
+
+
+def _idna_fqdn(fqdn: str) -> str | None:
+    """IDNA-normalize a hostname candidate; None when encoding fails."""
+    try:
+        return ".".join(
+            label.encode("idna").decode("ascii") for label in fqdn.split(".")
+        ).casefold()
+    except (UnicodeError, ValueError):
+        return None
 
 
 def _is_probable_hostname(fqdn: str, text: str, start: int) -> bool:
@@ -106,20 +132,40 @@ def normalize_case_text(text: str) -> str:
     return " ".join(stripped.casefold().split())
 
 
-def exact_content_hash(text: str) -> str:
-    """Hash of the raw case text (prompt + context), before normalization."""
-    return sha256_hex(text)
+def exact_case_hash(prompt: str, context: str) -> str:
+    """Hash of the canonical prompt/context payload, before normalization."""
+    return hashlib.sha256(_case_payload_bytes(prompt, context)).hexdigest()
 
 
-def normalized_content_hash(text: str) -> str:
-    """Hash of the normalized case text used for near-duplicate grouping."""
-    return sha256_hex(normalize_case_text(text))
+def normalized_case_hash(prompt: str, context: str) -> str:
+    """Hash of the normalized canonical payload used for near-duplicate grouping."""
+    return hashlib.sha256(_case_payload_normalized(prompt, context)).hexdigest()
 
 
 def is_held_out(case_id: str) -> bool:
-    """Deterministic held-out split membership from the case id alone."""
-    bucket = int(hashlib.sha256(f"{CORPUS_SPLIT_RULE}:{case_id}".encode("utf-8")).hexdigest(), 16)
+    """Deterministic held-out split membership: sha256(case_id) mod 100 < 25."""
+    bucket = int(hashlib.sha256(case_id.encode("utf-8")).hexdigest(), 16)
     return bucket % 100 < CORPUS_HELD_OUT_PERCENT
+
+
+def _case_payload(prompt: str, context: str) -> dict[str, str]:
+    """Canonical per-case payload so field boundaries survive hashing."""
+    return {"prompt": prompt, "context": context}
+
+
+def _case_payload_bytes(prompt: str, context: str) -> bytes:
+    return json.dumps(
+        _case_payload(prompt, context), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+
+
+def _case_payload_normalized(prompt: str, context: str) -> bytes:
+    return json.dumps(
+        _case_payload(normalize_case_text(prompt), normalize_case_text(context)),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
 
 
 def _url_hosts_allowed(url: str) -> bool:
@@ -147,8 +193,13 @@ def scan_case_text(text: str) -> list[str]:
     """
     findings: list[str] = []
     for label, pattern in _SECRET_PATTERNS.items():
-        if pattern.search(text):
+        for match in pattern.finditer(text):
+            if label == "assigned_credential":
+                value = match.group(0).rsplit("=", 1)[-1].rsplit(":", 1)[-1]
+                if value.strip("\"'").casefold() in {p.casefold() for p in PLACEHOLDER_VALUES}:
+                    continue
             findings.append(f"secret:{label}")
+            break
     for label, pattern in _PII_PATTERNS.items():
         for match in pattern.finditer(text):
             candidate = match.group(0)
@@ -164,9 +215,11 @@ def scan_case_text(text: str) -> list[str]:
         fqdn = fqdn_match.group(1)
         if not _is_probable_hostname(fqdn, text, fqdn_match.start(1)):
             continue
-        if _url_hosts_allowed(f"https://{fqdn}"):
-            continue
-        if any(token in fqdn.casefold() for token in ("example", "invalid", "test", "local")):
+        normalized = _idna_fqdn(fqdn)
+        if normalized is None:
+            findings.append("live_target:idna")
+            break
+        if _url_hosts_allowed(f"https://{normalized}"):
             continue
         findings.append("live_target:fqdn")
         break
@@ -211,8 +264,8 @@ def load_corpus_facts(dataset_path: Path) -> list[CorpusRowFacts]:
                 attack_family=str(family or "unknown"),
                 case_type=str(row.get("case_type") or "unknown"),
                 expected_blocked=bool(row.get("expected_blocked", False)),
-                content_hash=exact_content_hash(f"{prompt}\n{context}"),
-                normalized_hash=normalized_content_hash(f"{prompt} {context}"),
+                content_hash=exact_case_hash(prompt, context),
+                normalized_hash=normalized_case_hash(prompt, context),
                 held_out=is_held_out(case_id),
                 findings=scan_case_text(f"{prompt} {context}"),
             )
@@ -308,6 +361,10 @@ def verify_provenance_sidecar(
         raise CorpusGovernanceError("provenance held_out_percent must match the split rule")
 
     generator_digest = sidecar.get("generator_digest_sha256")
+    if generator_path is not None and generator_digest is None:
+        raise CorpusGovernanceError(
+            "generator_digest_sha256 is required to verify a generator-produced sidecar"
+        )
     if generator_digest is not None and generator_path is not None:
         actual = hashlib.sha256(generator_path.read_bytes()).hexdigest()
         if actual != generator_digest:
@@ -351,8 +408,14 @@ def verify_provenance_sidecar(
             )
 
     family_counts: dict[str, int] = {}
+    benign_by_family: dict[str, int] = {}
+    held_by_family: dict[str, int] = {}
     for fact in facts:
         family_counts[fact.attack_family] = family_counts.get(fact.attack_family, 0) + 1
+        if fact.is_benign_hard_negative:
+            benign_by_family[fact.attack_family] = benign_by_family.get(fact.attack_family, 0) + 1
+        if fact.held_out:
+            held_by_family[fact.attack_family] = held_by_family.get(fact.attack_family, 0) + 1
     sidecar_families = sidecar.get("families")
     if not isinstance(sidecar_families, dict):
         raise CorpusGovernanceError("provenance families must be an object")
@@ -363,6 +426,38 @@ def verify_provenance_sidecar(
         raise CorpusGovernanceError(
             f"provenance families {sidecar_family_counts} != dataset families {family_counts}"
         )
+    methods_by_family: dict[str, dict[str, int]] = {}
+    for entry in cases.values():
+        family = str(entry["attack_class"])
+        method = str(entry["generation_method"])
+        family_methods = methods_by_family.setdefault(family, {})
+        family_methods[method] = family_methods.get(method, 0) + 1
+    for family, summary in sidecar_families.items():
+        expected_benign = benign_by_family.get(family, 0)
+        if int(summary["benign_hard_negatives"]) != expected_benign:
+            raise CorpusGovernanceError(
+                f"provenance families.{family}.benign_hard_negatives "
+                f"{summary['benign_hard_negatives']} != {expected_benign}"
+            )
+        expected_held = held_by_family.get(family, 0)
+        if int(summary["held_out_count"]) != expected_held:
+            raise CorpusGovernanceError(
+                f"provenance families.{family}.held_out_count "
+                f"{summary['held_out_count']} != {expected_held}"
+            )
+        expected_methods = {
+            method: int(count)
+            for method, count in sorted(methods_by_family.get(family, {}).items())
+        }
+        actual_methods = {
+            method: int(count)
+            for method, count in sorted(summary["generation_methods"].items())
+        }
+        if actual_methods != expected_methods:
+            raise CorpusGovernanceError(
+                f"provenance families.{family}.generation_methods {actual_methods} "
+                f"!= {expected_methods}"
+            )
 
     return {
         "case_count": len(facts),
@@ -420,18 +515,15 @@ def build_governance_report(
     if manifest_path is not None and manifest_path.is_file():
         from src.eval.contract import (
             load_dataset_manifest,
-            resolve_dataset_manifest,
-            validate_manifest_document,
+            validate_dataset_against_manifest,
         )
 
         manifest = load_dataset_manifest(manifest_path)
-        validate_manifest_document(manifest, dataset_path=dataset_path)
-        resolved = resolve_dataset_manifest(dataset_path)
-        if resolved is None or resolved.get("content_digest_sha256") != manifest.get(
-            "content_digest_sha256"
-        ):
-            raise CorpusGovernanceError("dataset does not resolve to the sibling manifest")
+        validate_dataset_against_manifest(dataset_path, manifest)
         manifest_conformance = "pass"
+
+    # Cross-checks must actually run before this report may attest them.
+    verify_provenance_sidecar(sidecar, dataset_path)
 
     checks: dict[str, str] = {
         "dedupe": "pass" if not exact_groups and not normalized_groups else "fail",
@@ -482,12 +574,16 @@ def build_governance_report(
 
 
 def assert_governance_report_passes(report: dict[str, Any]) -> None:
-    """Fail closed unless every executed governance check passes."""
+    """Fail closed unless every governance check ran and passed."""
     checks = report.get("checks")
     if not isinstance(checks, dict) or not checks:
         raise CorpusGovernanceError("governance report is missing checks")
+    if set(checks.keys()) != REPORT_ALLOWED_CHECKS:
+        missing = sorted(REPORT_ALLOWED_CHECKS - set(checks.keys()))
+        extra = sorted(set(checks.keys()) - REPORT_ALLOWED_CHECKS)
+        raise CorpusGovernanceError(
+            f"governance report check set mismatch (missing={missing}, extra={extra})"
+        )
     for name, outcome in sorted(checks.items()):
-        if name not in REPORT_ALLOWED_CHECKS:
-            raise CorpusGovernanceError(f"governance report has unknown check {name!r}")
         if outcome != "pass":
             raise CorpusGovernanceError(f"governance check {name!r} did not pass: {outcome}")
