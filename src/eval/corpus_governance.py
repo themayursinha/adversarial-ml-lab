@@ -70,7 +70,7 @@ _SECRET_PATTERNS: dict[str, re.Pattern[str]] = {
     "private_key_block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     "assigned_credential": re.compile(
         r"\b(password|passwd|api_key|apikey|secret|token)\b\s*[:=]\s*"
-        r"[\"']?[^\"'\s]{8,}[\"']?",
+        r"[\"']?(?P<cred_value>[^\"'\s]{8,})[\"']?",
         re.IGNORECASE,
     ),
 }
@@ -83,10 +83,10 @@ _PII_PATTERNS: dict[str, re.Pattern[str]] = {
 
 _URL_PATTERN = re.compile(r"https?://[^\s\"'<>)\]]+", re.IGNORECASE)
 
-# Unicode-tolerant hostname candidates; TLD stays ASCII-only. Non-ASCII labels
-# are IDNA-normalized before allowlist checks so confusable homoglyph hosts
-# cannot hide behind the ASCII-only pattern.
-_FQDN_PATTERN = re.compile(r"\b((?:\w[\w-]*\.)+[a-zA-Z]{2,})\b")
+# Unicode-tolerant hostname candidates, including Unicode TLDs. Every candidate
+# is IDNA-normalized before allowlist checks so confusable homoglyph hosts and
+# live IDN targets cannot hide behind an ASCII-only pattern.
+_FQDN_PATTERN = re.compile(r"\b((?:\w[\w-]*\.)+[^\W\d_]{2,})\b")
 
 # Static assets and file suffixes that resemble TLDs but are not hostnames.
 _FILE_SUFFIXES = frozenset(
@@ -192,11 +192,12 @@ def scan_case_text(text: str) -> list[str]:
     the provenance sidecar instead of being scanned here.
     """
     findings: list[str] = []
+    placeholder_values = {p.casefold() for p in PLACEHOLDER_VALUES}
     for label, pattern in _SECRET_PATTERNS.items():
         for match in pattern.finditer(text):
             if label == "assigned_credential":
-                value = match.group(0).rsplit("=", 1)[-1].rsplit(":", 1)[-1]
-                if value.strip("\"'").casefold() in {p.casefold() for p in PLACEHOLDER_VALUES}:
+                value = match.group("cred_value").strip("\"'")
+                if value.casefold() in placeholder_values:
                     continue
             findings.append(f"secret:{label}")
             break
@@ -466,6 +467,35 @@ def verify_provenance_sidecar(
     }
 
 
+def _verify_generator_digest(sidecar: dict[str, Any]) -> None:
+    """Verify the pinned generator digest against the generator script bytes.
+
+    The generator is resolved from the sidecar's own ``generated_by`` reference
+    (repo-relative), so a wrong digest fails even when no explicit generator
+    path is supplied by the caller.
+    """
+    digest = sidecar.get("generator_digest_sha256")
+    generated_by = sidecar.get("generated_by")
+    if not digest or not generated_by:
+        raise CorpusGovernanceError(
+            "provenance sidecar must record generated_by and generator_digest_sha256"
+        )
+    generator_path = Path(generated_by)
+    if not generator_path.is_absolute():
+        repo_root = Path(__file__).resolve().parents[2]
+        generator_path = repo_root / generated_by
+    if not generator_path.is_file():
+        raise CorpusGovernanceError(
+            f"generator script {generated_by!r} not found; cannot verify generator digest"
+        )
+    actual = hashlib.sha256(generator_path.read_bytes()).hexdigest()
+    if actual != digest:
+        raise CorpusGovernanceError(
+            "generator_digest_sha256 does not match the generator script bytes; "
+            "regenerate the corpus artifacts"
+        )
+
+
 def build_governance_report(
     dataset_path: Path,
     sidecar: dict[str, Any],
@@ -523,6 +553,9 @@ def build_governance_report(
         manifest_conformance = "pass"
 
     # Cross-checks must actually run before this report may attest them.
+    # The generator digest is verified against the generator script bytes so a
+    # tampered or stale pin cannot ride along into an attested report.
+    _verify_generator_digest(sidecar)
     verify_provenance_sidecar(sidecar, dataset_path)
 
     checks: dict[str, str] = {

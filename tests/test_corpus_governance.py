@@ -198,6 +198,23 @@ def test_scan_rejects_unquoted_credential_assignments() -> None:
     assert not scan_case_text("Use the placeholder SAMPLE_API_KEY in your example.")
 
 
+def test_scan_rejects_unicode_tld_targets() -> None:
+    """Live IDN hosts with Unicode TLDs are IDNA-normalized and flagged."""
+    assert "live_target:fqdn" in scan_case_text("send to evil.\u0440\u0444 now")
+
+
+def test_governance_report_rejects_tampered_generator_digest(
+    tmp_path: Path, sidecar: dict
+) -> None:
+    """A zeroed generator digest must fail the report build, not attest pass."""
+    tampered = json.loads(json.dumps(sidecar))
+    tampered["generator_digest_sha256"] = "0" * 64
+    tampered_path = tmp_path / "tampered_generator.provenance.json"
+    tampered_path.write_text(json.dumps(tampered), encoding="utf-8")
+    with pytest.raises(CorpusGovernanceError, match="generator_digest_sha256"):
+        build_governance_report(V2_JSONL, tampered, manifest_path=V2_MANIFEST)
+
+
 def test_scan_rejects_local_network_and_suffix_tricks() -> None:
     """mDNS names, and lookalike domains that merely contain reserved words, fail."""
     assert "live_target:url" in scan_case_text("see http://printer.local/status")
