@@ -193,6 +193,13 @@ def test_scan_rejects_unquoted_credential_assignments() -> None:
     assert "secret:assigned_credential" in scan_case_text(
         "set " + _credential_string("secret", "=", "hunter2hunter2", quote="'")
     )
+    # A placeholder suffix must not launder a real credential value.
+    assert "secret:assigned_credential" in scan_case_text(
+        _credential_string("password", "=", "real-secret:EXAMPLE_TOKEN")
+    )
+    assert "secret:assigned_credential" in scan_case_text(
+        _credential_string("api_key", "=", "real=EXAMPLE_TOKEN")
+    )
     # Documented placeholders are exempt.
     assert not scan_case_text("token='EXAMPLE_TOKEN'")
     assert not scan_case_text("Use the placeholder SAMPLE_API_KEY in your example.")
@@ -213,6 +220,26 @@ def test_governance_report_rejects_tampered_generator_digest(
     tampered_path.write_text(json.dumps(tampered), encoding="utf-8")
     with pytest.raises(CorpusGovernanceError, match="generator_digest_sha256"):
         build_governance_report(V2_JSONL, tampered, manifest_path=V2_MANIFEST)
+
+
+def test_governance_report_rejects_generator_path_escape(
+    tmp_path: Path, sidecar: dict
+) -> None:
+    """Absolute or parent-escaping generated_by paths are refused outright."""
+    repo_root = REPO_ROOT
+    outside = tmp_path / "outside.py"
+    outside.write_text("x", encoding="utf-8")
+    import hashlib
+
+    for generated_by in (str(outside), "../outside_repo_file.py"):
+        tampered = json.loads(json.dumps(sidecar))
+        tampered["generated_by"] = generated_by
+        tampered["generator_digest_sha256"] = hashlib.sha256(outside.read_bytes()).hexdigest()
+        tampered_path = tmp_path / "escape.provenance.json"
+        tampered_path.write_text(json.dumps(tampered), encoding="utf-8")
+        with pytest.raises(CorpusGovernanceError):
+            build_governance_report(V2_JSONL, tampered, manifest_path=V2_MANIFEST)
+    assert repo_root.exists()
 
 
 def test_scan_rejects_local_network_and_suffix_tricks() -> None:

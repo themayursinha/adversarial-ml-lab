@@ -481,14 +481,21 @@ def _verify_generator_digest(sidecar: dict[str, Any]) -> None:
             "provenance sidecar must record generated_by and generator_digest_sha256"
         )
     generator_path = Path(generated_by)
-    if not generator_path.is_absolute():
-        repo_root = Path(__file__).resolve().parents[2]
-        generator_path = repo_root / generated_by
-    if not generator_path.is_file():
+    if generator_path.is_absolute():
+        raise CorpusGovernanceError("generated_by must be a repository-relative path")
+    repo_root = Path(__file__).resolve().parents[2]
+    resolved = (repo_root / generator_path).resolve()
+    try:
+        resolved.relative_to(repo_root)
+    except ValueError as exc:
+        raise CorpusGovernanceError(
+            "generated_by escapes the repository root; refusing to verify"
+        ) from exc
+    if not resolved.is_file():
         raise CorpusGovernanceError(
             f"generator script {generated_by!r} not found; cannot verify generator digest"
         )
-    actual = hashlib.sha256(generator_path.read_bytes()).hexdigest()
+    actual = hashlib.sha256(resolved.read_bytes()).hexdigest()
     if actual != digest:
         raise CorpusGovernanceError(
             "generator_digest_sha256 does not match the generator script bytes; "
