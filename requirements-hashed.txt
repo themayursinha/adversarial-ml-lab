@@ -304,9 +304,9 @@ huggingface-hub==1.30.0 \
     # via
     #   gradio
     #   gradio-client
-hydra-core==1.3.5 \
-    --hash=sha256:71c441eabbde086062045e4d3fce9e26015244f1a4ac721cf3e444c7edf10633 \
-    --hash=sha256:a3ff35b4ea6794e4c83d993016f4bde4ac35797ebe7a08f30e83ed9341880331
+hydra-core==1.3.6 \
+    --hash=sha256:55951f49c7e19c29f4281cce2eeaa6e73ef6c5620093a4efb402a7e4b839fc38 \
+    --hash=sha256:8c4c215b6cfba68e9a4e76f565bd7399fc2a86b93cfe8cb7328b046834dfbee5
     # via -r requirements.txt
 idna==3.19 \
     --hash=sha256:5e0811a4383b21dc5838069f801c4fb62113b7447663d2530d2bd6e77b49bf15 \
