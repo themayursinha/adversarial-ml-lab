@@ -41,6 +41,36 @@ jobs:
         run: |
           python -m pytest -q
 
+  regression-gate:
+    runs-on: ubuntu-24.04
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run deterministic regression gate (fail-closed)
+        run: |
+          python scripts/regression_gate.py \
+            --dataset evals/datasets/baseline_v2.jsonl \
+            --thresholds evals/thresholds/baseline_v2.thresholds.json \
+            --baseline evals/examples/baseline_v2_regression_baseline.json \
+            --out-dir regression-artifacts
+
+      - name: Upload regression gate artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.4
+        with:
+          name: regression-gate-artifacts
+          path: regression-artifacts/
+
   package-smoke:
     runs-on: ubuntu-24.04
     needs: [quality]

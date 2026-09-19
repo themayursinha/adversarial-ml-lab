@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "policy_id": "adml.regression.thresholds.regression_gate_fail_fixture",
+  "policy_version": "1.0.0",
+  "dataset_filename": "dataset.jsonl",
+  "dataset_digest_sha256": "86f292568c583f6d344332a7cea7e08f6c9cc313e234dcaf44a0a72b4d885a4c",
+  "z": 3.0,
+  "metrics": {
+    "pass_rate": {
+      "direction": "max",
+      "threshold": 1.0,
+      "margin": 0.0,
+      "baseline": 1.0,
+      "justification": "Intentional failing fixture: demands a perfect match rate the pipeline cannot reach."
+    },
+    "adversarial_miss_rate": {
+      "direction": "min",
+      "threshold": 0.0,
+      "margin": 0.0,
+      "baseline": 0.0,
+      "justification": "Intentional failing fixture: demands zero misses on adversarial cases."
+    }
+  },
+  "families": {},
+  "reviewed_by": "mayur",
+  "reviewed_utc": "2026-09-14T00:00:00Z"
+}
