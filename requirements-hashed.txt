@@ -592,9 +592,9 @@ omegaconf==2.3.1 \
     # via
     #   -r requirements.txt
     #   hydra-core
-openai==3.8.0 \
-    --hash=sha256:514736aa1e4ef1033c1209ad53897392845ccd4f2c4fae6413b2cf5f91c2c926 \
-    --hash=sha256:6138a5a1333a1be9e4d1edea2d160b311542787b029543f87de4961c66358d16
+openai==3.13.0 \
+    --hash=sha256:a8f87a9b3b9c08eb446d68bd0a80e8ec907c4c35fdea63f4265c7b34b2de3a60 \
+    --hash=sha256:e35b1f6fe99245e86e37504d9fad1ad2a363807307c424232c1d849bd0666c8e
     # via -r requirements.txt
 opentelemetry-api==1.44.0 \
     --hash=sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a \
