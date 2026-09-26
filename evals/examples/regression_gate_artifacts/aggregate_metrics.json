@@ -1,0 +1,195 @@
+{
+  "case_count": 204,
+  "code": {
+    "config_fingerprint_sha256": "7b1bf88d1f7930d5aa25da6c6e86c5a985077afcbec605631f7667ba30f108d5",
+    "package_version": "0.2.1",
+    "pipeline": "adml.evaluation.run.v1"
+  },
+  "dataset_digest_sha256": "3fdacd14e98516a7ce26b65efb9d474362f4c79b7b76c9b71112cce38daa7f39",
+  "dataset_filename": "baseline_v2.jsonl",
+  "family_metrics": {
+    "clean": {
+      "benign_false_block_rate": {
+        "denominator": 37,
+        "numerator": 1,
+        "value": 0.02702702702702703
+      },
+      "pass_rate": {
+        "denominator": 37,
+        "numerator": 36,
+        "value": 0.972972972972973
+      }
+    },
+    "context_tampering": {
+      "adversarial_miss_rate": {
+        "denominator": 17,
+        "numerator": 8,
+        "value": 0.47058823529411764
+      },
+      "benign_false_block_rate": {
+        "denominator": 7,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 24,
+        "numerator": 16,
+        "value": 0.6666666666666666
+      }
+    },
+    "data_exfiltration": {
+      "adversarial_miss_rate": {
+        "denominator": 17,
+        "numerator": 16,
+        "value": 0.9411764705882353
+      },
+      "benign_false_block_rate": {
+        "denominator": 7,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 24,
+        "numerator": 8,
+        "value": 0.3333333333333333
+      }
+    },
+    "inference_evasion": {
+      "adversarial_miss_rate": {
+        "denominator": 11,
+        "numerator": 11,
+        "value": 1.0
+      },
+      "benign_false_block_rate": {
+        "denominator": 11,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 28,
+        "numerator": 17,
+        "value": 0.6071428571428571
+      }
+    },
+    "jailbreak": {
+      "adversarial_miss_rate": {
+        "denominator": 14,
+        "numerator": 10,
+        "value": 0.7142857142857143
+      },
+      "benign_false_block_rate": {
+        "denominator": 7,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 22,
+        "numerator": 12,
+        "value": 0.5454545454545454
+      }
+    },
+    "many_shot": {
+      "adversarial_miss_rate": {
+        "denominator": 4,
+        "numerator": 4,
+        "value": 1.0
+      },
+      "benign_false_block_rate": {
+        "denominator": 4,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 8,
+        "numerator": 4,
+        "value": 0.5
+      }
+    },
+    "prompt_injection": {
+      "adversarial_miss_rate": {
+        "denominator": 21,
+        "numerator": 12,
+        "value": 0.5714285714285714
+      },
+      "benign_false_block_rate": {
+        "denominator": 9,
+        "numerator": 2,
+        "value": 0.2222222222222222
+      },
+      "pass_rate": {
+        "denominator": 30,
+        "numerator": 16,
+        "value": 0.5333333333333333
+      }
+    },
+    "rag_poisoning": {
+      "adversarial_miss_rate": {
+        "denominator": 13,
+        "numerator": 10,
+        "value": 0.7692307692307693
+      },
+      "benign_false_block_rate": {
+        "denominator": 6,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 19,
+        "numerator": 9,
+        "value": 0.47368421052631576
+      }
+    },
+    "tool_misuse": {
+      "adversarial_miss_rate": {
+        "denominator": 8,
+        "numerator": 8,
+        "value": 1.0
+      },
+      "benign_false_block_rate": {
+        "denominator": 4,
+        "numerator": 0,
+        "value": 0.0
+      },
+      "pass_rate": {
+        "denominator": 12,
+        "numerator": 4,
+        "value": 0.3333333333333333
+      }
+    }
+  },
+  "metrics": {
+    "adversarial_miss_rate": {
+      "denominator": 105,
+      "numerator": 79,
+      "value": 0.7523809523809524
+    },
+    "benign_false_block_rate": {
+      "denominator": 92,
+      "numerator": 3,
+      "value": 0.03260869565217391
+    },
+    "pass_rate": {
+      "denominator": 204,
+      "numerator": 122,
+      "value": 0.5980392156862745
+    },
+    "review_match_rate": {
+      "denominator": 204,
+      "numerator": 201,
+      "value": 0.9852941176470589
+    },
+    "risk_match_rate": {
+      "denominator": 204,
+      "numerator": 71,
+      "value": 0.3480392156862745
+    }
+  },
+  "pipeline": "regression_gate_v1",
+  "policy_id": "adml.regression.thresholds.baseline_v2",
+  "policy_version": "1.0.0",
+  "runtime": {
+    "deterministic": true,
+    "llm_mode": "simulation",
+    "simulation_seed": null
+  }
+}
