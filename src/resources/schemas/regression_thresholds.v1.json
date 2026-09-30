@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adversarial-ml-lab.local/schemas/regression_thresholds.v1.json",
+  "title": "Adversarial ML Lab regression threshold policy (v1)",
+  "description": "Fail-closed threshold policy consumed by the deterministic regression gate. The policy is pinned to one dataset digest; changing the corpus or a threshold requires a reviewed policy version bump.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "policy_version",
+    "dataset_filename",
+    "dataset_digest_sha256",
+    "z",
+    "metrics",
+    "families",
+    "reviewed_by",
+    "reviewed_utc"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "policy_id": {
+      "type": "string",
+      "pattern": "^adml\\.regression\\.thresholds\\.[a-z0-9_]+$"
+    },
+    "policy_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "dataset_filename": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Dataset the policy is valid for."
+    },
+    "dataset_digest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Raw dataset digest the thresholds were frozen against. The gate fails closed on any other corpus bytes."
+    },
+    "z": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Wilson interval z used for pass/fail uncertainty handling (3 = hard gate)."
+    },
+    "metrics": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/thresholdEntry" },
+      "description": "Global metric thresholds."
+    },
+    "families": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metrics"],
+        "properties": {
+          "metrics": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "$ref": "#/$defs/thresholdEntry" }
+          }
+        }
+      },
+      "description": "Per-attack-family metric thresholds."
+    },
+    "reviewed_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewed_utc": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "thresholdEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["direction", "threshold", "margin", "baseline", "justification"],
+      "properties": {
+        "direction": {
+          "enum": ["min", "max"],
+          "description": "min = higher-is-better (threshold is a floor); max = lower-is-better (threshold is a ceiling)."
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "margin": {
+          "type": "number",
+          "minimum": 0
+        },
+        "baseline": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Frozen baseline point estimate the threshold was derived from."
+        },
+        "justification": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this threshold level is defensible (margin formula, floor, review note)."
+        }
+      }
+    }
+  }
+}
